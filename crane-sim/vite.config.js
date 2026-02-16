@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   base: "/crane-sim-react/",
   build: {
-    outDir: "docs",
+    outDir: "../docs",
     emptyOutDir: true,
   },
 });
