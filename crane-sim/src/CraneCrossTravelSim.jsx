@@ -26,7 +26,6 @@ const CranePeakHoldSim = () => {
   const [hasTieBack, setHasTieBack] = useState(false);
   const [activeBtn, setActiveBtn] = useState(0);
 
-  const [lateralForce, setLateralForce] = useState(0);
   const [displacement, setDisplacement] = useState(0);
   const [twistAngle, setTwistAngle] = useState(0);
 
@@ -44,23 +43,23 @@ const CranePeakHoldSim = () => {
     const currentForce = totalMass * gFactor;
 
     const stiffnessK = hasTieBack ? 25.0 : 0.8;
-    const pDelta = load * 0.05;
 
     let currentDisp = 0;
     if (currentForce !== 0) {
-      currentDisp = (currentForce * 10 / stiffnessK) + ((pDelta / stiffnessK) * Math.sign(currentForce));
+      const primaryDisp = (currentForce * 10) / stiffnessK;
+      const pDelta = load * (Math.abs(primaryDisp) / beamHeight); // P-delta depends on actual displacement
+      currentDisp = primaryDisp + (pDelta / stiffnessK) * Math.sign(currentForce);
     }
 
-    setLateralForce(currentForce);
     setDisplacement(currentDisp);
 
     const angleRad = Math.atan(currentDisp / beamHeight);
     setTwistAngle(angleRad * (180 / Math.PI));
 
-    if (Math.abs(currentDisp) > maxDisp) setMaxDisp(Math.abs(currentDisp));
-    if (Math.abs(currentForce) > maxForce) setMaxForce(Math.abs(currentForce));
+    setMaxDisp(prev => Math.max(prev, Math.abs(currentDisp)));
+    setMaxForce(prev => Math.max(prev, Math.abs(currentForce)));
 
-  }, [activeBtn, load, hasTieBack, maxDisp, maxForce]);
+  }, [activeBtn, load, hasTieBack]);
 
   const resetMax = () => {
     setMaxDisp(0);
@@ -71,12 +70,12 @@ const CranePeakHoldSim = () => {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.header}>V7.0: Two Speed + Peak Hold</h2>
+      <h2 style={styles.header}>V7.0: Cross Travel Skew</h2>
 
       <div style={styles.controlPanel}>
         <div style={styles.inputGroup}>
           <div style={styles.label}><span>Load</span><span>{load} Ton</span></div>
-          <input type="range" min="0" max="30" value={load} onChange={e => setLoad(Number(e.target.value))} style={styles.slider} />
+          <input aria-label="Load" type="range" min="0" max="30" value={load} onChange={e => setLoad(Number(e.target.value))} style={styles.slider} />
         </div>
 
         <div style={styles.inputGroup}>

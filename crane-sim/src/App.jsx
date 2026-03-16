@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import CraneLongTravelSim from "./CraneLongTravelSim";
-import CranePeakHoldSim from "./CraneLongTravelSimGEM";
+import CranePeakHoldSim from "./CraneCrossTravelSim";
 
 const styles = {
   shell: {
@@ -148,7 +148,7 @@ export default function App() {
           </button>
 
           <button type="button" style={styles.cardBtn} onClick={() => navigateTo(VIEWS.app2)}>
-            <p style={styles.cardTitle}>App 2: Peak Hold</p>
+            <p style={styles.cardTitle}>App 2: Cross Travel Skew</p>
             <p style={styles.cardDesc}>Test two speed modes with peak hold for displacement and side force.</p>
           </button>
         </div>
