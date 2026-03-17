@@ -219,6 +219,14 @@ const CraneLongTravelSim = () => {
   const [weldStress, setWeldStress] = useState(0);
   const [weldUtil, setWeldUtil] = useState(0);
   const [weldFatigueUtil, setWeldFatigueUtil] = useState(0);
+  // SQT BAR weld (rail 60×60 → WF top flange)
+  const [sqtWeldSize, setSqtWeldSize] = useState(6);
+  const [sqtPattern, setSqtPattern] = useState("continuous");
+  const [sqtOn, setSqtOn] = useState(50);
+  const [sqtGap, setSqtGap] = useState(500);
+  const [sqtStress, setSqtStress] = useState(0);
+  const [sqtUtil, setSqtUtil] = useState(0);
+  const [sqtFatigueUtil, setSqtFatigueUtil] = useState(0);
   const [affectedRail, setAffectedRail] = useState("none");
 
   useEffect(() => {
@@ -320,6 +328,21 @@ const CraneLongTravelSim = () => {
     setWeldUtil(tau / WELD_ALLOW[electrode] * 100);
     setWeldFatigueUtil(tau / tauFatigueAllow * 100);
 
+    // ── SQT BAR weld (60×60 rail → WF top flange) ─────────────────────────
+    // Force acts at rail top → moment arm e = RAIL_HEIGHT_MM, bar width b = RAIL_HEIGHT_MM
+    // F_M = F × e / b = F × 60/60 = F  →  F_res = F × √2
+    const F_sqt_N    = sideThrust * 9810;                   // full side thrust, no tie-back deduction
+    const F_M_sqt_N  = F_sqt_N;                             // e = b = 60mm → ratio = 1
+    const F_res_sqt  = Math.sqrt(F_sqt_N ** 2 + F_M_sqt_N ** 2);
+    const a_sqt      = 0.707 * sqtWeldSize;
+    const sqtRatio   = sqtPattern === "continuous" ? 1.0 : sqtOn / (sqtOn + sqtGap);
+    const A_sqt      = 2 * RAIL_HEIGHT_MM * a_sqt * sqtRatio; // 2 welds × 60mm × ratio
+    const tau_sqt    = F_res_sqt / A_sqt;
+    const tauFat_sqt = sqtPattern === "continuous" ? 55 : 18;
+    setSqtStress(tau_sqt);
+    setSqtUtil(tau_sqt / WELD_ALLOW[electrode] * 100);
+    setSqtFatigueUtil(tau_sqt / tauFat_sqt * 100);
+
     // ── Skew sign ──────────────────────────────────────────────────────────
     const dirSign      = dir === "forward" ? 1 : -1;
     const phaseSign    = accelMode === 3 ? -1 : 1;
@@ -342,7 +365,7 @@ const CraneLongTravelSim = () => {
     } else {
       setAffectedRail("right");
     }
-  }, [load, trolleyPos, accelMode, hasTieBack, beamKey, beamKeyCross, dir, weldSize, electrode, mode, hasVFD, vfdRamp, syncDrive, weldPattern, weldOn, weldGap]);
+  }, [load, trolleyPos, accelMode, hasTieBack, beamKey, beamKeyCross, dir, weldSize, electrode, mode, hasVFD, vfdRamp, syncDrive, weldPattern, weldOn, weldGap, sqtWeldSize, sqtPattern, sqtOn, sqtGap]);
 
   const brakeTimer = useRef(null);
 
@@ -569,6 +592,53 @@ const CraneLongTravelSim = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* SQT BAR Weld Settings */}
+        <div style={styles.inputGroup}>
+          <div style={styles.label}><span>SQT BAR Weld (60×60 Rail → Top Flange)</span></div>
+          <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: "#78909c", marginBottom: 4 }}>Weld Size</div>
+              <select value={sqtWeldSize} onChange={e => setSqtWeldSize(Number(e.target.value))}
+                style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid #b0bec5", fontSize: 14 }}>
+                {[4, 5, 6, 8].map(s => <option key={s} value={s}>{s} mm</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {["continuous", "intermittent"].map(p => (
+              <button key={p} onClick={() => setSqtPattern(p)}
+                style={{ flex: 1, padding: "7px 4px", borderRadius: 6, border: "1px solid #b0bec5", cursor: "pointer", fontSize: 12, fontWeight: "bold",
+                  backgroundColor: sqtPattern === p ? "#e65100" : "#f5f5f5",
+                  color: sqtPattern === p ? "white" : "#546e7a" }}>
+                {p === "continuous" ? "Continuous" : "Intermittent"}
+              </button>
+            ))}
+          </div>
+          {sqtPattern === "intermittent" && (
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: "#78909c", marginBottom: 2 }}>Weld length (mm)</div>
+                <select value={sqtOn} onChange={e => setSqtOn(Number(e.target.value))}
+                  style={{ width: "100%", padding: "6px", borderRadius: 6, border: "1px solid #b0bec5", fontSize: 13 }}>
+                  {[25, 40, 50, 75, 100].map(v => <option key={v} value={v}>{v} mm</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: "#78909c", marginBottom: 2 }}>Gap (mm)</div>
+                <select value={sqtGap} onChange={e => setSqtGap(Number(e.target.value))}
+                  style={{ width: "100%", padding: "6px", borderRadius: 6, border: "1px solid #b0bec5", fontSize: 13 }}>
+                  {[100, 150, 200, 250, 300, 400, 500].map(v => <option key={v} value={v}>{v} mm</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+          {sqtPattern === "intermittent" && (
+            <div style={{ fontSize: 11, color: "#e65100", marginTop: 4 }}>
+              Ratio {(sqtOn / (sqtOn + sqtGap) * 100).toFixed(1)}% · Category E · τ_fatigue = 18 MPa
+            </div>
+          )}
         </div>
 
         {/* Direction + Action buttons */}
@@ -910,6 +980,40 @@ const CraneLongTravelSim = () => {
                       }
                       return msgs;
                     })()}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* SQT BAR weld check */}
+          <div style={{ borderTop: "1px solid #eceff1", paddingTop: 10, marginTop: 4 }}>
+            <div style={{ fontWeight: "bold", color: "#e65100", marginBottom: 6, fontSize: 13 }}>
+              SQT BAR Weld — 60×60 Rail → WF Top Flange
+              <span style={{ fontSize: 11, fontWeight: "normal", color: "#78909c", marginLeft: 8 }}>
+                {sqtWeldSize}mm · F_res = F×√2 (e=b=60mm)
+                {sqtPattern === "intermittent" && <span style={{ color: "#e65100" }}> · {sqtOn}↔{sqtGap}mm · {(sqtOn/(sqtOn+sqtGap)*100).toFixed(0)}%</span>}
+              </span>
+            </div>
+            {(() => {
+              const pct = Math.min(sqtUtil, 150);
+              const barColor = sqtUtil < 50 ? "#43a047" : sqtUtil < 80 ? "#fb8c00" : "#e53935";
+              return (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: "bold", color: barColor }}>τ = {sqtStress.toFixed(1)} MPa</span>
+                    <span style={{ fontSize: 13, fontWeight: "bold", color: barColor }}>{sqtUtil.toFixed(0)}% Static</span>
+                  </div>
+                  <div style={{ width: "100%", height: 14, backgroundColor: "#eceff1", borderRadius: 7, overflow: "hidden", marginBottom: 4 }}>
+                    <div style={{ width: `${pct}%`, height: "100%", borderRadius: 7, backgroundColor: barColor, transition: "width 0.3s" }} />
+                  </div>
+                  <div style={{ minHeight: 24 }}>
+                    {sqtUtil > 100
+                      ? <span style={{ padding: "3px 10px", borderRadius: 6, backgroundColor: "#ffebee", color: "#c62828", fontSize: 12, fontWeight: "bold" }}>OVERSTRESSED — rail weld will fail</span>
+                      : sqtFatigueUtil > 100
+                      ? <span style={{ padding: "3px 10px", borderRadius: 6, backgroundColor: "#fff3e0", color: "#e65100", fontSize: 12, fontWeight: "bold" }}>FATIGUE FAIL — {sqtPattern === "intermittent" ? "Cat.E" : "Cat.D"} {sqtFatigueUtil.toFixed(0)}% → crack</span>
+                      : <span style={{ padding: "3px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>PASS — fatigue {sqtFatigueUtil.toFixed(0)}% ({sqtPattern === "intermittent" ? "Cat.E 18MPa" : "Cat.D 55MPa"})</span>
+                    }
                   </div>
                 </div>
               );
