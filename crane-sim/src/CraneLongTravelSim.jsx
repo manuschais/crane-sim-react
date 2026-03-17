@@ -319,7 +319,7 @@ const CraneLongTravelSim = () => {
   const weldColor = weldUtil < 50 ? "#43a047" : weldUtil < 80 ? "#fb8c00" : "#e53935";
   // Visual rotation angle for End Truck / Welded Base SVG (pivot = bottom flange)
   const dispSign       = lateralForce > 0 ? 1 : lateralForce < 0 ? -1 : 0;
-  const rotAngle       = dispSign * totalTopDisp * 1.5; // visual scale, not physical
+  const rotAngle       = dispSign * totalTopDisp * 0.25; // visual scale (beam disp already 10x exaggerated)
   const leftTilt       = affectedRail === "left"  ? rotAngle : 0;
   const rightTilt      = affectedRail === "right" ? rotAngle : 0;
   const leftWeldColor  = affectedRail === "left"  ? weldColor : "#43a047";
