@@ -259,6 +259,11 @@ const CraneLongTravelSim = () => {
     if (accelMode > 0) {
       const vertWheelLoad = Math.max(massLeft, massRight) / 2;
       sideThrust += vertWheelLoad * 0.05;
+      // Cross Travel: masses are symmetric → inertiaDiff = 0, but end truck skew
+      // during acceleration still scales with accel (differential drive response)
+      if (mode === "cross") {
+        sideThrust += (load + trolleyMass) * accel * 0.1;
+      }
     }
 
     // ── Lateral stiffness + beam displacement (actual, mm) ────────────────
@@ -273,8 +278,11 @@ const CraneLongTravelSim = () => {
     const beamDispMm   = sideThrust / kStiffness;  // actual lateral deflection (mm)
 
     // ── Torsional calculation ──────────────────────────────────────────────
+    // Tie-back shares the lateral force (parallel springs) →
+    // only the beam's fraction of sideThrust creates torque on the section
+    const fractionToBeam = hasTieBack ? kBeamActual / (kBeamActual + K_TIEBACK_ADDON) : 1.0;
     const e_mm  = sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM;
-    const T_Nmm = sideThrust * 9810 * e_mm;
+    const T_Nmm = sideThrust * 9810 * fractionToBeam * e_mm;
     // Long Travel: bottom flange WELDED to column plate → warping restrained both ends
     //   kTors = GJ + 4π²ECw/L²  (fixed-fixed warping)  φ = TL/(4kTors)
     // Cross Travel: girder end rests on END TRUCK SADDLE (bearing/pin) → warping FREE
@@ -292,9 +300,7 @@ const CraneLongTravelSim = () => {
     setTwistAngleDeg(phi_deg);
 
     // ── Weld stress ────────────────────────────────────────────────────────
-    const kBeamOnly    = kBeamActual;
-    const fractionToWeld = hasTieBack ? kBeamOnly / (kBeamOnly + K_TIEBACK_ADDON) : 1.0;
-    const F_weld_N  = sideThrust * 9810 * fractionToWeld;
+    const F_weld_N  = sideThrust * 9810 * fractionToBeam;
     const F_M_N     = F_weld_N * e_mm / sec.b;
     const F_res_N   = Math.sqrt(F_weld_N ** 2 + F_M_N ** 2);
     const a_weld    = 0.707 * weldSize;
