@@ -183,13 +183,14 @@ const CraneLongTravelSim = () => {
     const beamDispMm = (sideThrust / kStiffness) * 10;
 
     // --- Torsional calculation ---
-    // e = distance from shear center to rail top (rail sits on top flange)
-    const e_mm = sec.depth / 2 + sec.tf / 2 + RAIL_HEIGHT_MM;
+    // Welded bottom flange → pivot at bottom flange centroid (not shear center)
+    // e = bottom flange centroid → rail top
+    const e_mm = sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM;
     // Torsional moment (N·mm): side thrust ton → N × eccentricity
     const T_Nmm = sideThrust * 9810 * e_mm;
-    // Effective torsional stiffness (N·mm²): St. Venant + Warping
-    const kTors = G_STEEL * sec.J_mm4 + Math.PI ** 2 * E_STEEL * sec.Cw_mm6 / BEAM_SPAN_MM ** 2;
-    // φ (rad) — midspan concentrated torque, simply supported beam
+    // Welded plate = warping restrained at both ends → 4π² (not π²)
+    const kTors = G_STEEL * sec.J_mm4 + 4 * Math.PI ** 2 * E_STEEL * sec.Cw_mm6 / BEAM_SPAN_MM ** 2;
+    // φ (rad) — midspan concentrated torque, warping-fixed beam
     const phi_rad = (T_Nmm * BEAM_SPAN_MM) / (4 * kTors);
     const phi_deg = phi_rad * (180 / Math.PI);
     // Lateral shift at rail top from rotation (mm)
@@ -565,9 +566,10 @@ const CraneLongTravelSim = () => {
           {/* Torsion */}
           <div style={{ width: "100%", marginBottom: 8, padding: "8px 10px", backgroundColor: "#fff3e0", borderRadius: 8 }}>
             <div style={{ fontSize: 11, color: "#78909c" }}>
-              Torsion at Rail Top (e = {
-                Math.round(BEAM_SECTIONS[beamKey].depth / 2 + BEAM_SECTIONS[beamKey].tf / 2 + RAIL_HEIGHT_MM)
-              } mm)
+              Torsion at Rail Top — Welded Base
+              <span style={{ marginLeft: 6, color: "#e65100" }}>
+                e = {Math.round(BEAM_SECTIONS[beamKey].depth - BEAM_SECTIONS[beamKey].tf / 2 + RAIL_HEIGHT_MM)} mm
+              </span>
             </div>
             <div style={{ fontSize: 22, fontWeight: "800", color: "#e65100" }}>
               {torsionDisp.toFixed(2)}
