@@ -203,6 +203,9 @@ const CraneLongTravelSim = () => {
   const [accelMode, setAccelMode] = useState(0); // 0=idle, 1=soft, 2=hard, 3=brake
   const [mode, setMode] = useState("long");       // "long" | "cross"
   const [beamKeyCross, setBeamKeyCross] = useState("H900×300");
+  const [hasVFD, setHasVFD] = useState(false);   // Inverter / VFD
+  const [vfdRamp, setVfdRamp] = useState(8);      // VFD ramp time (s), user-set
+  const [syncDrive, setSyncDrive] = useState(false); // Synchronized dual-drive
 
   const [skewAngle, setSkewAngle] = useState(0);
   const [lateralForce, setLateralForce] = useState(0);
@@ -219,9 +222,18 @@ const CraneLongTravelSim = () => {
     const sections  = mode === "long" ? BEAM_SECTIONS      : BEAM_SECTIONS_CROSS;
     const bKey      = mode === "long" ? beamKey            : beamKeyCross;
     const spanMM    = mode === "long" ? BEAM_SPAN_MM       : BEAM_SPAN_CROSS_MM;
-    const aSoft     = mode === "long" ? ACCEL_SOFT         : ACCEL_SOFT_CROSS;
-    const aHard     = mode === "long" ? ACCEL_HARD         : ACCEL_HARD_CROSS;
-    const aBrake    = mode === "long" ? ACCEL_BRAKE        : ACCEL_BRAKE_CROSS;
+    // VFD overrides ramp time — both speeds use the same user-set ramp
+    // No VFD: star-delta typical T~1.5s (Speed1) and ~1s (Speed2) — aggressive
+    const tS1 = hasVFD ? vfdRamp       : (mode === "long" ? T_SOFT  : T_SOFT);
+    const tS2 = hasVFD ? vfdRamp       : (mode === "long" ? T_HARD  : T_HARD);
+    const tBr = hasVFD ? vfdRamp * 0.8 : T_BRAKE; // VFD braking also softer
+    const spd1 = mode === "long" ? SPEED_1_MS       : SPEED_1_CROSS_MS;
+    const spd2 = mode === "long" ? SPEED_2_MS       : SPEED_2_CROSS_MS;
+    const noVfdT1 = mode === "long" ? 1.5 : 1.0;   // no-VFD reference ramp times
+    const noVfdT2 = mode === "long" ? 1.0 : 0.8;
+    const aSoft  = hasVFD ? spd1 / tS1 / G_MS2 : (mode === "long" ? spd1/noVfdT1/G_MS2 : spd1/noVfdT1/G_MS2);
+    const aHard  = hasVFD ? spd2 / tS2 / G_MS2 : (mode === "long" ? spd2/noVfdT2/G_MS2 : spd2/noVfdT2/G_MS2);
+    const aBrake = hasVFD ? spd2 / tBr / G_MS2 : spd2 / T_BRAKE / G_MS2;
 
     const accel = accelMode === 1 ? aSoft : accelMode === 2 ? aHard : accelMode === 3 ? aBrake : 0;
 
@@ -288,8 +300,9 @@ const CraneLongTravelSim = () => {
     // ── Skew sign ──────────────────────────────────────────────────────────
     const dirSign      = dir === "forward" ? 1 : -1;
     const phaseSign    = accelMode === 3 ? -1 : 1;
-    // Cross Travel has no positional mass asymmetry → use dirSign only (always +1 for skew magnitude)
-    const massAsymSign = mode === "cross" ? 1 : Math.sign(massRight - massLeft);
+    // Synchronized dual-drive VFD: both ends run at same speed → no positional asymmetry
+    // Cross Travel also has no positional asymmetry
+    const massAsymSign = (mode === "cross" || syncDrive) ? 1 : Math.sign(massRight - massLeft);
     const skewSign     = dirSign * phaseSign * massAsymSign;
 
     const signedThrust = skewSign * sideThrust;
@@ -306,7 +319,7 @@ const CraneLongTravelSim = () => {
     } else {
       setAffectedRail("right");
     }
-  }, [load, trolleyPos, accelMode, hasTieBack, beamKey, beamKeyCross, dir, weldSize, electrode, mode]);
+  }, [load, trolleyPos, accelMode, hasTieBack, beamKey, beamKeyCross, dir, weldSize, electrode, mode, hasVFD, vfdRamp, syncDrive]);
 
   const brakeTimer = useRef(null);
 
@@ -525,6 +538,49 @@ const CraneLongTravelSim = () => {
             </button>
           </div>
 
+          {/* VFD / Inverter Control */}
+          <div style={{ borderTop: "1px solid #eceff1", paddingTop: 10, marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontWeight: "bold", fontSize: 13, color: "#37474f" }}>Inverter (VFD)</span>
+              <button type="button" onClick={() => setHasVFD(v => !v)} style={{
+                padding: "4px 14px", borderRadius: 20, border: "none", cursor: "pointer",
+                fontWeight: "bold", fontSize: 12,
+                backgroundColor: hasVFD ? "#00838f" : "#b0bec5",
+                color: "white",
+              }}>
+                {hasVFD ? "ON" : "OFF"}
+              </button>
+            </div>
+            {hasVFD && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#546e7a" }}>
+                  <span>Ramp Time</span>
+                  <span style={{ fontWeight: "bold", color: "#00838f" }}>{vfdRamp} s</span>
+                </div>
+                <input type="range" min="2" max="20" step="1" value={vfdRamp}
+                  onChange={e => setVfdRamp(Number(e.target.value))}
+                  style={styles.slider}
+                />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#90a4ae" }}>
+                  <span>2s (aggressive)</span><span>10s</span><span>20s (gentle)</span>
+                </div>
+                <button type="button" onClick={() => setSyncDrive(v => !v)} style={{
+                  padding: "5px 10px", borderRadius: 6, border: `2px solid ${syncDrive ? "#43a047" : "#b0bec5"}`,
+                  cursor: "pointer", fontWeight: "bold", fontSize: 11,
+                  backgroundColor: syncDrive ? "#e8f5e9" : "#f5f5f5",
+                  color: syncDrive ? "#2e7d32" : "#546e7a",
+                }}>
+                  {syncDrive ? "✓ Synchronized Dual Drive" : "Single Drive (no sync)"}
+                </button>
+              </div>
+            )}
+            {!hasVFD && (
+              <div style={{ fontSize: 11, color: "#ef5350", backgroundColor: "#fff3e0", padding: "4px 8px", borderRadius: 6 }}>
+                No VFD — Star-Delta start: T ≈ 1–1.5s (high accel)
+              </div>
+            )}
+          </div>
+
           <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 10 }}>
             Hold to run · Release = Auto Brake
           </div>
@@ -683,6 +739,15 @@ const CraneLongTravelSim = () => {
             </div>
             <div style={{ fontSize: 12, color: "#90a4ae" }}>
               {affectedRail === "left" ? "← Left rail (bites inward)" : affectedRail === "right" ? "→ Right rail (bites inward)" : "—"}
+            </div>
+            {/* VFD badge */}
+            <div style={{ marginTop: 4, fontSize: 11, fontWeight: "bold",
+              color: hasVFD ? "#00838f" : "#ef5350",
+              backgroundColor: hasVFD ? "#e0f2f1" : "#fff3e0",
+              padding: "2px 8px", borderRadius: 4, display: "inline-block" }}>
+              {hasVFD
+                ? `VFD ON · Ramp ${vfdRamp}s${syncDrive ? " · Sync" : ""}`
+                : "No VFD · Star-Delta T≈1–1.5s"}
             </div>
           </div>
 
