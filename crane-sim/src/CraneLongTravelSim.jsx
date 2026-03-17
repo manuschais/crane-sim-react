@@ -270,13 +270,15 @@ const CraneLongTravelSim = () => {
     setBeamTwist(beamDispMm);
     setSkewAngle(clamp(rawAngle, -12, 12));
 
-    // The rail that receives side thrust from flange contact
+    // The rail that receives side thrust from wheel flange contact:
+    // CW skew (skewAngle>0) = left end leads → left-front wheel inner flange bites LEFT rail
+    // CCW skew (skewAngle<0) = right end leads → right-front wheel inner flange bites RIGHT rail
     if (sideThrust < 0.01) {
       setAffectedRail("none");
     } else if (signedThrust > 0) {
-      setAffectedRail("right"); // CW skew pushes toward right rail
+      setAffectedRail("left");  // CW skew → left rail bites
     } else {
-      setAffectedRail("left");  // CCW skew pushes toward left rail
+      setAffectedRail("right"); // CCW skew → right rail bites
     }
   }, [load, trolleyPos, accelMode, hasTieBack, beamKey, dir, weldSize, electrode]);
 
@@ -502,10 +504,14 @@ const CraneLongTravelSim = () => {
       {/* ═══ RIGHT PANEL — Visualizations ═══ */}
       <div style={styles.rightPanel}>
 
-      {/* Alerts */}
-      {isActive && Math.abs(trolleyPos - span / 2) > 5 && (
+      {/* Alerts — always rendered to prevent layout jump */}
+      {isActive && Math.abs(trolleyPos - span / 2) > 5 ? (
         <div style={styles.skewAlert}>
-          Warning: Unbalanced load — skew and flange grinding likely.
+          ⚠ Warning: Unbalanced load — skew and flange grinding likely.
+        </div>
+      ) : (
+        <div style={{ ...styles.skewAlert, backgroundColor: "#e8f5e9", color: "#388e3c", border: "1px solid #c8e6c9" }}>
+          ✓ OK — Load balanced
         </div>
       )}
 
@@ -624,7 +630,7 @@ const CraneLongTravelSim = () => {
               <span style={{ fontSize: 15 }}> Ton</span>
             </div>
             <div style={{ fontSize: 12, color: "#90a4ae" }}>
-              {lateralForce > 0.01 ? "→ Right rail" : lateralForce < -0.01 ? "← Left rail" : "—"}
+              {affectedRail === "left" ? "← Left rail (bites inward)" : affectedRail === "right" ? "→ Right rail (bites inward)" : "—"}
             </div>
           </div>
 
