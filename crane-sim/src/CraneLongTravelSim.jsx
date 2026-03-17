@@ -369,10 +369,10 @@ const CraneLongTravelSim = () => {
   const e_display       = Math.round(sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM);
   const weldColor       = weldUtil < 50 ? "#43a047" : weldUtil < 80 ? "#fb8c00" : "#e53935";
   // Visual rotation: use physical torsion angle scaled for visibility
-  // Long Travel: phi_deg ~0.05-0.3° → scale ×25; Cross Travel: phi_deg ~1-3° → scale ×2
-  const rotScale = mode === "long" ? 25 : 2;
+  // Long Travel: phi_deg ~0.05-0.3° → scale ×8; Cross Travel: phi_deg ~1-3° → scale ×2
+  const rotScale = mode === "long" ? 8 : 2;
   const dispSign = lateralForce > 0 ? 1 : lateralForce < 0 ? -1 : 0;
-  const rotAngle = dispSign * Math.min(twistAngleDeg * rotScale, 6);
+  const rotAngle = dispSign * Math.min(twistAngleDeg * rotScale, 3);
   const leftTilt       = affectedRail === "left"  ? rotAngle : 0;
   const rightTilt      = affectedRail === "right" ? rotAngle : 0;
   const leftWeldColor  = affectedRail === "left"  ? weldColor : "#43a047";
@@ -668,7 +668,7 @@ const CraneLongTravelSim = () => {
                   <rect x="-52" y="191" width="104" height="14" fill="#37474f" rx="2"/>
                   <text x="0" y="201" textAnchor="middle" fill="#cfd8dc" fontSize="6">WELDED</text>
                   {/* DYNAMIC: rotate about (0, ry) */}
-                  <g transform={`rotate(${tilt}, 0, ${ry})`}>
+                  <g transform={`rotate(${tilt}, 0, ${ry})`} style={{ transition: "transform 0.3s ease-out" }}>
                     <rect x="-8" y="70" width="16" height="121" fill="#546e7a"/>
                     <rect x="-52" y="57" width="104" height="13" fill="#37474f" rx="2"/>
                     <rect x="-18" y="33" width="36" height="24" fill="#e65100" rx="2"/>
@@ -711,7 +711,7 @@ const CraneLongTravelSim = () => {
                   <polygon points={`50,205 32,205 50,191`}     fill={wc} opacity="0.95"/>
                   <rect x="-52" y="191" width="104" height="14" fill="#37474f" rx="2"/>
                   <text x="0" y="201" textAnchor="middle" fill="#cfd8dc" fontSize="6">WELDED</text>
-                  <g transform={`rotate(${tilt}, 0, ${ry})`}>
+                  <g transform={`rotate(${tilt}, 0, ${ry})`} style={{ transition: "transform 0.3s ease-out" }}>
                     <rect x="-8" y="70" width="16" height="121" fill="#546e7a"/>
                     <rect x="-52" y="57" width="104" height="13" fill="#37474f" rx="2"/>
                     <rect x="-18" y="33" width="36" height="24" fill="#e65100" rx="2"/>
