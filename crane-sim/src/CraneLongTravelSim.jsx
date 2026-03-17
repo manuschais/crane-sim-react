@@ -92,16 +92,30 @@ const styles = {
 };
 
 // Beam section data (JIS G 3192)
+// J  = St. Venant torsion constant (mm⁴) = Σ(b·t³)/3
+// Cw = Warping constant (mm⁶) = I_yf · h_o² / 2  (h_o = depth − tf)
 const BEAM_SECTIONS = {
-  "H600×300": { label: "H600×300 (H588×300×12×20)", Iy_cm4: 9010, depth: 588 },
-  "H500×300": { label: "H500×300 (H488×300×11×18)", Iy_cm4: 8110, depth: 488 },
+  "H600×300": {
+    label: "H600×300 (H588×300×12×20)",
+    Iy_cm4: 9010, depth: 588, tf: 20, tw: 12,
+    J_mm4: 1915755,
+    Cw_mm6: 7.259e12,
+  },
+  "H500×300": {
+    label: "H500×300 (H488×300×11×18)",
+    Iy_cm4: 8110, depth: 488, tf: 18, tw: 11,
+    J_mm4: 1366937,
+    Cw_mm6: 4.473e12,
+  },
 };
 
 // Lateral stiffness: K = 48EI_y/L³  (simply supported, 5m span)
 // K[N/mm] → K[ton/mm] ÷ 9810
 const BEAM_SPAN_MM = 5000;
 const E_STEEL = 200000; // N/mm²
+const G_STEEL = 80000;  // N/mm²
 const K_TIEBACK_ADDON = 24.2; // ton/mm — additional stiffness from tie-back rod
+const RAIL_HEIGHT_MM  = 60;   // Square bar rail height on top of flange
 
 function calcKbeam(Iy_cm4) {
   const Iy_mm4 = Iy_cm4 * 1e4;
@@ -136,6 +150,9 @@ const CraneLongTravelSim = () => {
   const [skewAngle, setSkewAngle] = useState(0);
   const [lateralForce, setLateralForce] = useState(0);
   const [beamTwist, setBeamTwist] = useState(0);
+  const [torsionDisp, setTorsionDisp] = useState(0);
+  const [totalTopDisp, setTotalTopDisp] = useState(0);
+  const [twistAngleDeg, setTwistAngleDeg] = useState(0);
   const [affectedRail, setAffectedRail] = useState("none");
 
   useEffect(() => {
@@ -160,9 +177,28 @@ const CraneLongTravelSim = () => {
     }
 
     // K from actual beam section + tie-back contribution
-    const kBeam = calcKbeam(BEAM_SECTIONS[beamKey].Iy_cm4);
+    const sec = BEAM_SECTIONS[beamKey];
+    const kBeam = calcKbeam(sec.Iy_cm4);
     const kStiffness = hasTieBack ? kBeam + K_TIEBACK_ADDON : kBeam;
     const beamDispMm = (sideThrust / kStiffness) * 10;
+
+    // --- Torsional calculation ---
+    // e = distance from shear center to rail top (rail sits on top flange)
+    const e_mm = sec.depth / 2 + sec.tf / 2 + RAIL_HEIGHT_MM;
+    // Torsional moment (N·mm): side thrust ton → N × eccentricity
+    const T_Nmm = sideThrust * 9810 * e_mm;
+    // Effective torsional stiffness (N·mm²): St. Venant + Warping
+    const kTors = G_STEEL * sec.J_mm4 + Math.PI ** 2 * E_STEEL * sec.Cw_mm6 / BEAM_SPAN_MM ** 2;
+    // φ (rad) — midspan concentrated torque, simply supported beam
+    const phi_rad = (T_Nmm * BEAM_SPAN_MM) / (4 * kTors);
+    const phi_deg = phi_rad * (180 / Math.PI);
+    // Lateral shift at rail top from rotation (mm)
+    const torsionDispMm = phi_rad * e_mm;
+    const totalTopDispMm = beamDispMm + torsionDispMm;
+
+    setTorsionDisp(torsionDispMm);
+    setTotalTopDisp(totalTopDispMm);
+    setTwistAngleDeg(phi_deg);
 
     // Direction and phase determine skew sign:
     // - forward=+1, backward=-1
@@ -202,7 +238,7 @@ const CraneLongTravelSim = () => {
   // Cleanup timer on unmount
   useEffect(() => () => clearTimeout(brakeTimer.current), []);
 
-  const isCritical = beamTwist > 4.0;
+  const isCritical = totalTopDisp > 6.0;
   const isActive = accelMode > 0;
 
   const phaseLabel =
@@ -505,39 +541,58 @@ const CraneLongTravelSim = () => {
 
         {/* Data Panel */}
         <div style={styles.card}>
-          <div style={{ width: "100%", marginBottom: 15 }}>
+          {/* Side Thrust */}
+          <div style={{ width: "100%", marginBottom: 12 }}>
             <div style={{ fontSize: 12, color: "#78909c" }}>Side Thrust</div>
-            <div style={{ fontSize: 32, fontWeight: "900", color: "#c62828" }}>
-              {Math.abs(lateralForce).toFixed(2)}{" "}
-              <span style={{ fontSize: 16 }}>Ton</span>
+            <div style={{ fontSize: 28, fontWeight: "900", color: "#c62828" }}>
+              {Math.abs(lateralForce).toFixed(2)}
+              <span style={{ fontSize: 15 }}> Ton</span>
             </div>
             <div style={{ fontSize: 12, color: "#90a4ae" }}>
-              Direction: {lateralForce > 0.01 ? "→ Right rail" : lateralForce < -0.01 ? "← Left rail" : "—"}
+              {lateralForce > 0.01 ? "→ Right rail" : lateralForce < -0.01 ? "← Left rail" : "—"}
             </div>
           </div>
 
-          <div style={{ width: "100%", marginBottom: 15 }}>
-            <div style={{ fontSize: 12, color: "#78909c" }}>Twist Distance</div>
-            <div style={{ fontSize: 32, fontWeight: "900", color: isCritical ? "#d32f2f" : "#2e7d32" }}>
-              {beamTwist.toFixed(1)}{" "}
-              <span style={{ fontSize: 16 }}>mm</span>
+          {/* Lateral Bending */}
+          <div style={{ width: "100%", marginBottom: 8, padding: "8px 10px", backgroundColor: "#f5f5f5", borderRadius: 8 }}>
+            <div style={{ fontSize: 11, color: "#78909c" }}>Lateral Bending (Beam)</div>
+            <div style={{ fontSize: 22, fontWeight: "800", color: "#1565c0" }}>
+              {beamTwist.toFixed(2)}
+              <span style={{ fontSize: 13 }}> mm</span>
             </div>
           </div>
 
-          <div
-            style={{
-              backgroundColor: isCritical ? "#ffebee" : "#e8f5e9",
-              padding: 10, borderRadius: 8, width: "100%", textAlign: "center",
-            }}
-          >
-            {isCritical ? "DANGER: Severe rail and wheel wear" : "SAFE: Normal wear range"}
+          {/* Torsion */}
+          <div style={{ width: "100%", marginBottom: 8, padding: "8px 10px", backgroundColor: "#fff3e0", borderRadius: 8 }}>
+            <div style={{ fontSize: 11, color: "#78909c" }}>
+              Torsion at Rail Top (e = {
+                Math.round(BEAM_SECTIONS[beamKey].depth / 2 + BEAM_SECTIONS[beamKey].tf / 2 + RAIL_HEIGHT_MM)
+              } mm)
+            </div>
+            <div style={{ fontSize: 22, fontWeight: "800", color: "#e65100" }}>
+              {torsionDisp.toFixed(2)}
+              <span style={{ fontSize: 13 }}> mm</span>
+              <span style={{ fontSize: 13, color: "#90a4ae", marginLeft: 8 }}>
+                φ = {twistAngleDeg.toFixed(3)}°
+              </span>
+            </div>
+          </div>
+
+          {/* Total Top Displacement */}
+          <div style={{ width: "100%", marginBottom: 12, padding: "8px 10px", backgroundColor: isCritical ? "#ffebee" : "#e8f5e9", borderRadius: 8 }}>
+            <div style={{ fontSize: 11, color: "#78909c" }}>Total Shift at Rail Top</div>
+            <div style={{ fontSize: 28, fontWeight: "900", color: isCritical ? "#d32f2f" : "#2e7d32" }}>
+              {totalTopDisp.toFixed(2)}
+              <span style={{ fontSize: 15 }}> mm</span>
+            </div>
+            <div style={{ fontSize: 11, fontWeight: "bold", color: isCritical ? "#c62828" : "#388e3c" }}>
+              {isCritical ? "DANGER: Severe rail & wheel wear" : "SAFE: Normal wear range"}
+            </div>
           </div>
 
           {!hasTieBack && (
-            <div style={{ fontSize: 11, color: "#d32f2f", marginTop: 10 }}>
-              No tie-back: Side thrust can twist the structure.
-              <br />
-              Misalignment between wheel and rail angle increases wear.
+            <div style={{ fontSize: 11, color: "#d32f2f" }}>
+              No tie-back: Side thrust twists the structure.
             </div>
           )}
         </div>
