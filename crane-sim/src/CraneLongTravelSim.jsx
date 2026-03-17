@@ -148,7 +148,8 @@ const WELD_ALLOW = { E6013: 0.3 * 420, E7016: 0.3 * 480 }; // MPa
 const BEAM_SPAN_MM = 5000;
 const E_STEEL = 200000; // N/mm²
 const G_STEEL = 80000;  // N/mm²
-const K_TIEBACK_ADDON = 24.2; // ton/mm — additional stiffness from tie-back rod
+const K_TIEBACK_LONG  = 24.2; // ton/mm — stiff rod to building column (Long Travel)
+const K_TIEBACK_CROSS = 0.5;  // ton/mm — end clamp / lateral guide on end truck (Cross Travel)
 const RAIL_HEIGHT_MM  = 60;   // Square bar rail height on top of flange
 
 function calcKbeam(Iy_cm4) {
@@ -274,23 +275,29 @@ const CraneLongTravelSim = () => {
       return (48 * E_STEEL * Iy_mm4) / (spanMM ** 3) / 9810;
     };
     const kBeamActual  = kBeamFn(sec.Iy_cm4);
-    const kStiffness   = hasTieBack ? kBeamActual + K_TIEBACK_ADDON : kBeamActual;
+    const kTieBack     = mode === "long" ? K_TIEBACK_LONG : K_TIEBACK_CROSS;
+    const kStiffness   = hasTieBack ? kBeamActual + kTieBack : kBeamActual;
     const beamDispMm   = sideThrust / kStiffness;  // actual lateral deflection (mm)
 
     // ── Torsional calculation ──────────────────────────────────────────────
-    // Tie-back adds lateral stiffness (reduces deflection) but does NOT reduce
-    // the applied torque on the section — full sideThrust still acts at rail top
-    const fractionToBeam = hasTieBack ? kBeamActual / (kBeamActual + K_TIEBACK_ADDON) : 1.0;
+    // Tie-back at top flange adds torsional spring: k_tors_tb = k_tb[N/mm] × h²[mm²]
+    // where h = depth/2 (distance from shear center to top flange for doubly-sym I-beam)
+    // phi_rad = T / (k_eq_beam + k_tors_tb)
+    // k_eq_beam = phiDenom × kTors / spanMM  [N·mm/rad]
+    const fractionToBeam = hasTieBack ? kBeamActual / (kBeamActual + kTieBack) : 1.0;
     const e_mm  = sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM;
-    const T_Nmm = sideThrust * 9810 * e_mm;  // full torque, unaffected by tie-back
+    const T_Nmm = sideThrust * 9810 * e_mm;
     // Long Travel: bottom flange WELDED to column plate → warping restrained both ends
-    //   kTors = GJ + 4π²ECw/L²  (fixed-fixed warping)  φ = TL/(4kTors)
+    //   kTors = GJ + 4π²ECw/L²  (fixed-fixed warping)
     // Cross Travel: girder end rests on END TRUCK SADDLE (bearing/pin) → warping FREE
-    //   kTors = GJ + π²ECw/L²   (pin-pin warping free)  φ = TL/(8kTors)
+    //   kTors = GJ + π²ECw/L²   (pin-pin warping free)
     const warpFactor = mode === "long" ? 4 : 1;   // 4π² vs π²
-    const phiDenom   = mode === "long" ? 4 : 8;   // denominator in φ formula
-    const kTors   = G_STEEL * sec.J_mm4 + warpFactor * Math.PI ** 2 * E_STEEL * sec.Cw_mm6 / spanMM ** 2;
-    const phi_rad = (T_Nmm * spanMM) / (phiDenom * kTors);
+    const phiDenom   = mode === "long" ? 4 : 8;
+    const kTors      = G_STEEL * sec.J_mm4 + warpFactor * Math.PI ** 2 * E_STEEL * sec.Cw_mm6 / spanMM ** 2;
+    const kEqBeam    = phiDenom * kTors / spanMM;                                  // N·mm/rad
+    const h_tb       = sec.depth / 2;                                              // mm
+    const kTorsTb    = hasTieBack ? (kTieBack * 9810) * h_tb ** 2 : 0;            // N·mm/rad
+    const phi_rad    = T_Nmm / (kEqBeam + kTorsTb);
     const phi_deg = phi_rad * (180 / Math.PI);
     const torsionDispMm  = phi_rad * e_mm;
     const totalTopDispMm = beamDispMm + torsionDispMm;
@@ -849,7 +856,7 @@ const CraneLongTravelSim = () => {
                       if (fatigueRisk)
                         return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#fff3e0", color: "#e65100", fontSize: 12, fontWeight: "bold" }}>FATIGUE RISK — cyclic loading without tie-back causes cracking</span>;
                       if (hasTieBack)
-                        return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>Tie-back installed — weld load reduced to {(calcKbeam(sec.Iy_cm4) / (calcKbeam(sec.Iy_cm4) + K_TIEBACK_ADDON) * 100).toFixed(1)}%</span>;
+                        return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>Tie-back installed — weld load reduced to {(calcKbeam(sec.Iy_cm4) / (calcKbeam(sec.Iy_cm4) + (mode === "long" ? K_TIEBACK_LONG : K_TIEBACK_CROSS)) * 100).toFixed(1)}%</span>;
                       return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>PASS — static capacity OK</span>;
                     })()}
                   </div>
