@@ -5,89 +5,109 @@ const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const styles = {
   container: {
     fontFamily: "'Sarabun', sans-serif",
-    padding: "20px",
-    maxWidth: "1000px",
-    margin: "0 auto",
+    padding: "16px",
+    width: "100%",
+    boxSizing: "border-box",
     backgroundColor: "#eceff1",
-    borderRadius: "16px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+    minHeight: "100vh",
   },
   header: {
     textAlign: "center",
     color: "#37474f",
-    marginBottom: "20px",
-    fontSize: "28px",
+    marginBottom: "14px",
+    fontSize: "22px",
     fontWeight: "800",
     textTransform: "uppercase",
+    letterSpacing: "1px",
   },
-  controlPanel: {
-    backgroundColor: "white",
-    padding: "25px",
-    borderRadius: "16px",
-    marginBottom: "20px",
+  mainGrid: {
     display: "grid",
-    gap: "20px",
+    gridTemplateColumns: "340px 1fr",
+    gap: "16px",
+    alignItems: "start",
   },
-  inputGroup: { display: "flex", flexDirection: "column", gap: "8px" },
+  leftPanel: {
+    backgroundColor: "white",
+    padding: "18px",
+    borderRadius: "14px",
+    boxShadow: "0 4px 15px rgba(0,0,0,0.08)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+    position: "sticky",
+    top: "16px",
+  },
+  rightPanel: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+  },
+  inputGroup: { display: "flex", flexDirection: "column", gap: "6px" },
   label: {
     display: "flex",
     justifyContent: "space-between",
     fontWeight: "700",
     color: "#546e7a",
-    fontSize: "14px",
+    fontSize: "13px",
   },
-  slider: { width: "100%", accentColor: "#00838f", height: "8px", cursor: "pointer" },
-  vizContainer: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" },
+  slider: { width: "100%", accentColor: "#00838f", height: "6px", cursor: "pointer" },
+  vizRow: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" },
   card: {
     backgroundColor: "white",
-    padding: "20px",
-    borderRadius: "16px",
+    padding: "16px",
+    borderRadius: "14px",
     boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
   },
-  btnGroup: { display: "flex", gap: "10px", justifyContent: "center", marginTop: "10px", flexWrap: "wrap" },
+  btnGroup: { display: "flex", gap: "8px", justifyContent: "center", marginTop: "8px", flexWrap: "wrap" },
   btn: {
-    padding: "14px 22px",
+    padding: "12px 18px",
     borderRadius: "8px",
     border: "none",
     cursor: "pointer",
-    fontSize: "15px",
+    fontSize: "14px",
     fontWeight: "bold",
     transition: "all 0.1s",
     color: "white",
-    boxShadow: "0 4px 0 rgba(0,0,0,0.1)",
+    boxShadow: "0 3px 0 rgba(0,0,0,0.1)",
     userSelect: "none",
     touchAction: "manipulation",
+    flex: 1,
   },
   dirBtn: {
-    padding: "10px 24px",
+    padding: "8px 16px",
     borderRadius: "8px",
     border: "2px solid #b0bec5",
     cursor: "pointer",
-    fontSize: "15px",
+    fontSize: "14px",
     fontWeight: "bold",
     transition: "all 0.15s",
     userSelect: "none",
+    flex: 1,
   },
   skewAlert: {
-    gridColumn: "1 / -1",
     backgroundColor: "#ffebee",
     color: "#c62828",
-    padding: "10px",
+    padding: "8px 12px",
     borderRadius: "8px",
     textAlign: "center",
     fontWeight: "bold",
     border: "1px solid #ffcdd2",
+    fontSize: "13px",
   },
   phaseBadge: {
     display: "inline-block",
-    padding: "4px 14px",
+    padding: "3px 12px",
     borderRadius: "20px",
     fontWeight: "bold",
-    fontSize: "13px",
-    marginBottom: "8px",
+    fontSize: "12px",
+    marginBottom: "6px",
+  },
+  divider: {
+    borderTop: "1px solid #eceff1",
+    margin: "2px 0",
   },
 };
 
@@ -281,11 +301,17 @@ const CraneLongTravelSim = () => {
   const biteX = biteLeft ? 30 : 345;
   const dragX = biteLeft ? 345 : 30;
 
+  const sec = BEAM_SECTIONS[beamKey];
+  const e_display = Math.round(sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM);
+  const weldColor = weldUtil < 50 ? "#43a047" : weldUtil < 80 ? "#fb8c00" : "#e53935";
+
   return (
     <div style={styles.container}>
-      <h2 style={styles.header}>V9.1: Long Travel Skew Simulation</h2>
+      <h2 style={styles.header}>Long Travel Skew Simulation — 25 Ton Overhead Crane</h2>
 
-      <div style={styles.controlPanel}>
+      <div style={styles.mainGrid}>
+      {/* ═══ LEFT PANEL — Controls ═══ */}
+      <div style={styles.leftPanel}>
         {/* Load */}
         <div style={styles.inputGroup}>
           <div style={styles.label}>
@@ -453,20 +479,20 @@ const CraneLongTravelSim = () => {
             </button>
           </div>
         </div>
-      </div>
+      </div>{/* end leftPanel */}
+
+      {/* ═══ RIGHT PANEL — Visualizations ═══ */}
+      <div style={styles.rightPanel}>
 
       {/* Alerts */}
       {isActive && Math.abs(trolleyPos - span / 2) > 5 && (
-        <div style={{ ...styles.skewAlert, marginBottom: 16 }}>
+        <div style={styles.skewAlert}>
           Warning: Unbalanced load — skew and flange grinding likely.
         </div>
       )}
 
-      {/* Visualizations */}
-      <div style={styles.vizContainer}>
-
         {/* Top View */}
-        <div style={{ ...styles.card, gridColumn: "1 / -1", backgroundColor: "#f5f5f5" }}>
+        <div style={{ ...styles.card, backgroundColor: "#f5f5f5" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
             <span style={{ fontWeight: "bold", color: "#546e7a" }}>
               Top View — Skew (clamped ±12°)
@@ -554,6 +580,9 @@ const CraneLongTravelSim = () => {
           )}
         </div>
 
+        {/* Bottom row: 3 cards */}
+        <div style={styles.vizRow}>
+
         {/* Beam Twist View */}
         <div style={styles.card}>
           <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 8 }}>
@@ -587,7 +616,90 @@ const CraneLongTravelSim = () => {
               </g>
             )}
           </svg>
-          <div style={{ fontSize: 12, color: "#78909c" }}>Beam Twist Distance</div>
+          <div style={{ fontSize: 12, color: "#78909c" }}>Lateral Bending</div>
+        </div>
+
+        {/* Welded Base View */}
+        <div style={styles.card}>
+          <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 6, fontSize: 13 }}>
+            Welded Base Detail
+          </div>
+          <svg width="100%" viewBox="0 0 200 310" style={{ maxHeight: 260 }}>
+            {/* Column */}
+            <rect x="60" y="230" width="80" height="75" fill="#90a4ae" rx="3"/>
+            <text x="100" y="275" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">COLUMN</text>
+
+            {/* Bearing Plate */}
+            <rect x="35" y="213" width="130" height="17" fill="#546e7a" rx="2"/>
+            <text x="100" y="225" textAnchor="middle" fill="white" fontSize="9">Bearing Plate</text>
+
+            {/* Fillet Welds — colored by stress */}
+            <polygon points="35,213 55,213 35,196" fill={weldColor} opacity="0.9"/>
+            <polygon points="165,213 145,213 165,196" fill={weldColor} opacity="0.9"/>
+            <text x="100" y="209" textAnchor="middle" fill={weldColor} fontSize="9" fontWeight="bold">
+              ▲ Weld {weldUtil.toFixed(0)}%
+            </text>
+
+            {/* Bottom Flange */}
+            <rect x="28" y="183" width="144" height="13" fill="#37474f" rx="2"/>
+
+            {/* Web */}
+            <rect x="87" y={sec.depth > 540 ? 68 : 88} width="26"
+              height={sec.depth > 540 ? 115 : 95} fill="#546e7a"/>
+
+            {/* Top Flange */}
+            <rect x="28" y={sec.depth > 540 ? 55 : 75} width="144" height="13" fill="#37474f" rx="2"/>
+
+            {/* Rail (square bar 60mm) */}
+            <rect x="76" y={sec.depth > 540 ? 30 : 50} width="48" height="25" fill="#e65100" rx="2"/>
+            <text x="100" y={sec.depth > 540 ? 45 : 65} textAnchor="middle" fill="white" fontSize="8">RAIL</text>
+
+            {/* Wheel */}
+            <ellipse cx="100" cy={sec.depth > 540 ? 22 : 42} rx="22" ry="10" fill="#b0bec5" stroke="#78909c" strokeWidth="2"/>
+
+            {/* Side Thrust arrow */}
+            <defs>
+              <marker id="arr-red2" markerWidth="7" markerHeight="5" refX="0" refY="2.5" orient="auto">
+                <polygon points="0 0,7 2.5,0 5" fill="#c62828"/>
+              </marker>
+            </defs>
+            {isActive && lateralForce !== 0 && (
+              <line
+                x1={lateralForce > 0 ? 175 : 25}
+                y1={sec.depth > 540 ? 37 : 57}
+                x2={lateralForce > 0 ? 148 : 52}
+                y2={sec.depth > 540 ? 37 : 57}
+                stroke="#c62828" strokeWidth="2.5"
+                markerEnd="url(#arr-red2)"
+              />
+            )}
+
+            {/* e dimension line */}
+            <line x1="18" y1="200" x2="18" y2={sec.depth > 540 ? 37 : 57}
+              stroke="#e91e63" strokeWidth="1.5" strokeDasharray="4,3"/>
+            <line x1="12" y1="200" x2="24" y2="200" stroke="#e91e63" strokeWidth="1.5"/>
+            <line x1="12" y1={sec.depth > 540 ? 37 : 57}
+              x2="24" y2={sec.depth > 540 ? 37 : 57} stroke="#e91e63" strokeWidth="1.5"/>
+            <text x="8" y={(200 + (sec.depth > 540 ? 37 : 57)) / 2}
+              textAnchor="middle" fill="#e91e63" fontSize="9" fontWeight="bold"
+              transform={`rotate(-90,8,${(200 + (sec.depth > 540 ? 37 : 57)) / 2})`}>
+              e={e_display}mm
+            </text>
+
+            {/* Tie-back rod */}
+            {hasTieBack && (
+              <>
+                <line x1="28" y1={sec.depth > 540 ? 62 : 82} x2="0" y2={sec.depth > 540 ? 62 : 82}
+                  stroke="#43a047" strokeWidth="4"/>
+                <rect x="-4" y={sec.depth > 540 ? 56 : 76} width="4" height="12" fill="#43a047"/>
+                <text x="14" y={sec.depth > 540 ? 55 : 75} fill="#43a047" fontSize="8" fontWeight="bold">TB</text>
+              </>
+            )}
+
+            {/* Section label */}
+            <text x="196" y="100" textAnchor="end" fill="#78909c" fontSize="9">{beamKey}</text>
+          </svg>
+          <div style={{ fontSize: 11, color: "#78909c" }}>Support at Column</div>
         </div>
 
         {/* Data Panel */}
@@ -649,8 +761,10 @@ const CraneLongTravelSim = () => {
           )}
         </div>
 
+        </div>{/* end vizRow */}
+
         {/* Weld Stress Card */}
-        <div style={{ ...styles.card, gridColumn: "1 / -1" }}>
+        <div style={styles.card}>
           <div style={{ width: "100%", marginBottom: 10 }}>
             <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 6 }}>
               Weld Stress — Bottom Flange to Column Plate
@@ -713,7 +827,8 @@ const CraneLongTravelSim = () => {
             })()}
           </div>
         </div>
-      </div>
+      </div>{/* end rightPanel */}
+      </div>{/* end mainGrid */}
     </div>
   );
 };
