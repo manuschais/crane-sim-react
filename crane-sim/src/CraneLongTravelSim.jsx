@@ -278,11 +278,11 @@ const CraneLongTravelSim = () => {
     const beamDispMm   = sideThrust / kStiffness;  // actual lateral deflection (mm)
 
     // ── Torsional calculation ──────────────────────────────────────────────
-    // Tie-back shares the lateral force (parallel springs) →
-    // only the beam's fraction of sideThrust creates torque on the section
+    // Tie-back adds lateral stiffness (reduces deflection) but does NOT reduce
+    // the applied torque on the section — full sideThrust still acts at rail top
     const fractionToBeam = hasTieBack ? kBeamActual / (kBeamActual + K_TIEBACK_ADDON) : 1.0;
     const e_mm  = sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM;
-    const T_Nmm = sideThrust * 9810 * fractionToBeam * e_mm;
+    const T_Nmm = sideThrust * 9810 * e_mm;  // full torque, unaffected by tie-back
     // Long Travel: bottom flange WELDED to column plate → warping restrained both ends
     //   kTors = GJ + 4π²ECw/L²  (fixed-fixed warping)  φ = TL/(4kTors)
     // Cross Travel: girder end rests on END TRUCK SADDLE (bearing/pin) → warping FREE
