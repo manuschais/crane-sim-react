@@ -217,6 +217,7 @@ const CraneLongTravelSim = () => {
   const [sqtPattern, setSqtPattern] = useState("continuous");
   const [sqtOn, setSqtOn] = useState(50);
   const [sqtGap, setSqtGap] = useState(500);
+  const [cyclesPerYear, setCyclesPerYear] = useState(15000);
   const [sqtStress, setSqtStress] = useState(0);
   const [sqtUtil, setSqtUtil] = useState(0);
   const [sqtFatigueUtil, setSqtFatigueUtil] = useState(0);
@@ -563,6 +564,19 @@ const CraneLongTravelSim = () => {
               Ratio {(sqtOn / (sqtOn + sqtGap) * 100).toFixed(1)}% · Category E · τ_fatigue = 18 MPa
             </div>
           )}
+          {/* Cycles per year */}
+          <div style={{ marginTop: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#78909c", marginBottom: 4 }}>
+              <span>Crane starts/year (cycles)</span>
+              <span style={{ fontWeight: "bold", color: "#37474f" }}>{cyclesPerYear.toLocaleString()}</span>
+            </div>
+            <input type="range" min="1000" max="100000" step="1000"
+              value={cyclesPerYear} onChange={e => setCyclesPerYear(Number(e.target.value))}
+              style={{ width: "100%", accentColor: "#37474f" }} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#b0bec5" }}>
+              <span>1,000 (เบา)</span><span>15,000 (ปกติ)</span><span>100,000 (หนัก)</span>
+            </div>
+          </div>
         </div>
 
         {/* Direction + Action buttons */}
@@ -868,7 +882,7 @@ const CraneLongTravelSim = () => {
                 <div style={{ width: "100%", height: 14, backgroundColor: "#eceff1", borderRadius: 7, overflow: "hidden", marginBottom: 4 }}>
                   <div style={{ width: `${pct}%`, height: "100%", borderRadius: 7, backgroundColor: barColor, transition: "width 0.3s" }} />
                 </div>
-                <div style={{ minHeight: 24 }}>
+                <div style={{ minHeight: 24, marginBottom: 6 }}>
                   {sqtUtil > 100
                     ? <span style={{ padding: "3px 10px", borderRadius: 6, backgroundColor: "#ffebee", color: "#c62828", fontSize: 12, fontWeight: "bold" }}>OVERSTRESSED — rail weld will fail</span>
                     : sqtFatigueUtil > 100
@@ -876,6 +890,27 @@ const CraneLongTravelSim = () => {
                     : <span style={{ padding: "3px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>PASS — fatigue {sqtFatigueUtil.toFixed(0)}% ({sqtPattern === "intermittent" ? "Cat.E 18MPa" : "Cat.D 55MPa"})</span>
                   }
                 </div>
+                {/* Fatigue Life Estimate */}
+                {sqtStress > 0 && (() => {
+                  const tauFat = sqtPattern === "continuous" ? 55 : 18;
+                  const C = 2e6 * Math.pow(tauFat, 3);
+                  const nFail = C / Math.pow(sqtStress, 3);
+                  const years = nFail / cyclesPerYear;
+                  const isPass = sqtFatigueUtil <= 100;
+                  const bg = isPass ? "#e8f5e9" : years < 5 ? "#ffebee" : years < 20 ? "#fff3e0" : "#fff8e1";
+                  const col = isPass ? "#2e7d32" : years < 5 ? "#c62828" : years < 20 ? "#e65100" : "#f57f17";
+                  return (
+                    <div style={{ padding: "8px 12px", borderRadius: 8, backgroundColor: bg, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 12, color: col, fontWeight: "bold" }}>
+                        ⏱ Estimated fatigue life
+                      </span>
+                      <span style={{ fontSize: 20, fontWeight: "900", color: col }}>
+                        {years >= 999 ? ">999" : years.toFixed(1)}
+                        <span style={{ fontSize: 12, fontWeight: "normal", marginLeft: 4 }}>ปี</span>
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })()}
