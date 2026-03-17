@@ -5,42 +5,53 @@ const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const styles = {
   container: {
     fontFamily: "'Sarabun', sans-serif",
-    padding: "16px",
+    padding: "10px 16px",
     width: "100%",
     boxSizing: "border-box",
     backgroundColor: "#eceff1",
-    minHeight: "100vh",
+    height: "100vh",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
   },
   header: {
     textAlign: "center",
     color: "#37474f",
-    marginBottom: "14px",
-    fontSize: "22px",
+    marginBottom: "8px",
+    fontSize: "18px",
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: "1px",
+    flexShrink: 0,
   },
   mainGrid: {
     display: "grid",
-    gridTemplateColumns: "340px 1fr",
-    gap: "16px",
-    alignItems: "start",
+    gridTemplateColumns: "320px 1fr",
+    gap: "12px",
+    alignItems: "stretch",
+    flex: 1,
+    overflow: "hidden",
+    minHeight: 0,
   },
   leftPanel: {
     backgroundColor: "white",
-    padding: "18px",
+    padding: "14px",
     borderRadius: "14px",
     boxShadow: "0 4px 15px rgba(0,0,0,0.08)",
     display: "flex",
     flexDirection: "column",
-    gap: "14px",
-    position: "sticky",
-    top: "16px",
+    gap: "10px",
+    overflowY: "auto",
+    height: "100%",
+    boxSizing: "border-box",
   },
   rightPanel: {
     display: "flex",
     flexDirection: "column",
-    gap: "14px",
+    gap: "10px",
+    overflowY: "auto",
+    height: "100%",
+    boxSizing: "border-box",
   },
   inputGroup: { display: "flex", flexDirection: "column", gap: "6px" },
   label: {
@@ -51,10 +62,10 @@ const styles = {
     fontSize: "13px",
   },
   slider: { width: "100%", accentColor: "#00838f", height: "6px", cursor: "pointer" },
-  vizRow: { display: "grid", gridTemplateColumns: "2fr 1fr", gap: "14px" },
+  vizRow: { display: "grid", gridTemplateColumns: "auto 1fr", gap: "12px", alignItems: "stretch", flexShrink: 0 },
   card: {
     backgroundColor: "white",
-    padding: "16px",
+    padding: "12px",
     borderRadius: "14px",
     boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
     display: "flex",
@@ -507,7 +518,7 @@ const CraneLongTravelSim = () => {
             <span>Welded Base — Left &amp; Right Rail</span>
             <span style={{ fontSize: 11, color: "#78909c" }}>{beamKey} · e={e_display}mm</span>
           </div>
-          <svg width="100%" viewBox="0 0 420 280">
+          <svg width="420" height="280" viewBox="0 0 420 280" style={{display:"block", flexShrink:0}}>
             <defs>
               <marker id="arr-thrust" markerWidth="7" markerHeight="5" refX="0" refY="2.5" orient="auto">
                 <polygon points="0 0,7 2.5,0 5" fill="#c62828"/>
@@ -602,53 +613,6 @@ const CraneLongTravelSim = () => {
             Affected rail tilts · Other rail stays straight · Weld % = utilization
           </div>
         </div>
-            {/* Center reference line — static */}
-            <line x1="0" y1="-120" x2="0" y2="90" stroke="#cfd8dc" strokeDasharray="4" strokeWidth="1"/>
-
-            {/* STATIC: Column stub */}
-            <rect x="-42" y="95" width="84" height="70" fill="#90a4ae" rx="3"/>
-            <text x="0" y="138" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">COLUMN</text>
-
-            {/* STATIC: Bearing Plate */}
-            <rect x="-70" y="78" width="140" height="17" fill="#546e7a" rx="2"/>
-            <text x="0" y="90" textAnchor="middle" fill="white" fontSize="8">Bearing Plate</text>
-
-            {/* STATIC: Fillet welds — colored by stress */}
-            <polygon points="-70,78 -50,78 -70,62" fill={weldColor} opacity="0.95"/>
-            <polygon points="70,78 50,78 70,62" fill={weldColor} opacity="0.95"/>
-
-            {/* STATIC: Bottom flange — welded, does NOT move */}
-            <rect x="-70" y="62" width="140" height="16" fill="#37474f" rx="2"/>
-            <text x="0" y="73" textAnchor="middle" fill="#cfd8dc" fontSize="7">WELDED</text>
-
-            {/* DYNAMIC: Web + Top Flange + Rail — rotate about bottom of bottom flange (0,78) */}
-            <g transform={`rotate(${rotAngle}, 0, 78)`}>
-              {/* Web */}
-              <rect x="-10" y="-52" width="20" height="114" fill="#546e7a"/>
-              {/* Top flange */}
-              <rect x="-70" y="-66" width="140" height="14" fill="#37474f" rx="2"/>
-              {/* Rail (square bar) */}
-              <rect x="-24" y="-93" width="48" height="27" fill="#e65100" rx="2"/>
-              <text x="0" y="-78" textAnchor="middle" fill="white" fontSize="7">RAIL</text>
-              {/* Wheel */}
-              <ellipse cx="0" cy="-107" rx="26" ry="11" fill="#b0bec5" stroke="#78909c" strokeWidth="2"/>
-              {/* Tie-back rod */}
-              {hasTieBack && (
-                <line x1="-110" y1="-59" x2="-70" y2="-59" stroke="#43a047" strokeWidth="5"/>
-              )}
-            </g>
-
-            {/* Total displacement annotation */}
-            {totalTopDisp > 0.2 && (
-              <g>
-                <line x1="0" y1="-120" x2={dispSign * Math.min(totalTopDisp * 7, 95)} y2="-120"
-                  stroke="#e91e63" strokeWidth="2"/>
-                <text x={dispSign * Math.min(totalTopDisp * 3.5, 47)} y="-124"
-                  textAnchor="middle" fill="#e91e63" fontSize="10" fontWeight="bold">
-                  {totalTopDisp.toFixed(1)} mm
-                </text>
-              </g>
-            )}
 
         {/* Data Panel */}
         <div style={styles.card}>
@@ -783,7 +747,7 @@ const CraneLongTravelSim = () => {
               {dir === "forward" ? "▶" : "◀"} {dir.charAt(0).toUpperCase() + dir.slice(1)} · {phaseLabel}
             </span>
           </div>
-          <svg width="100%" height="160" viewBox="0 0 400 160">
+          <svg width="100%" height="140" viewBox="0 0 400 160" style={{display:"block"}}>
             <line x1="20" y1="10" x2="20" y2="150" stroke="#b0bec5" strokeWidth="6" />
             <line x1="380" y1="10" x2="380" y2="150" stroke="#b0bec5" strokeWidth="6" />
             <text x="20" y="8" textAnchor="middle" fill="#78909c" fontSize="10">L</text>
