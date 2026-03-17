@@ -212,7 +212,6 @@ const CraneLongTravelSim = () => {
   const [lateralForce, setLateralForce] = useState(0);
   const [beamTwist, setBeamTwist] = useState(0);
   const [torsionDisp, setTorsionDisp] = useState(0);
-  const [totalTopDisp, setTotalTopDisp] = useState(0);
   const [twistAngleDeg, setTwistAngleDeg] = useState(0);
   const [weldStress, setWeldStress] = useState(0);
   const [weldUtil, setWeldUtil] = useState(0);
@@ -300,10 +299,7 @@ const CraneLongTravelSim = () => {
     const phi_rad    = T_Nmm / (kEqBeam + kTorsTb);
     const phi_deg = phi_rad * (180 / Math.PI);
     const torsionDispMm  = phi_rad * e_mm;
-    const totalTopDispMm = beamDispMm + torsionDispMm;
-
     setTorsionDisp(torsionDispMm);
-    setTotalTopDisp(totalTopDispMm);
     setTwistAngleDeg(phi_deg);
 
     // ── Weld stress ────────────────────────────────────────────────────────
@@ -696,8 +692,8 @@ const CraneLongTravelSim = () => {
                     <text x="0" y="200" textAnchor="middle" fill={wc} fontSize="8" fontWeight="bold">{weldUtil.toFixed(0)}%</text>
                   )}
                   {/* Displacement label */}
-                  {isActive && affectedRail === "left" && totalTopDisp > 0.2 && (
-                    <text x={tilt > 0 ? 30 : -30} y="15" fill="#e91e63" fontSize="9" fontWeight="bold">{totalTopDisp.toFixed(1)}mm</text>
+                  {isActive && affectedRail === "left" && torsionDisp > 0.05 && (
+                    <text x={tilt > 0 ? 30 : -30} y="15" fill="#e91e63" fontSize="9" fontWeight="bold">{torsionDisp.toFixed(2)}mm</text>
                   )}
                 </g>
               );
@@ -736,8 +732,8 @@ const CraneLongTravelSim = () => {
                   {affectedRail === "right" && weldUtil > 0 && (
                     <text x="0" y="200" textAnchor="middle" fill={wc} fontSize="8" fontWeight="bold">{weldUtil.toFixed(0)}%</text>
                   )}
-                  {isActive && affectedRail === "right" && totalTopDisp > 0.2 && (
-                    <text x={tilt > 0 ? 30 : -30} y="15" fill="#e91e63" fontSize="9" fontWeight="bold">{totalTopDisp.toFixed(1)}mm</text>
+                  {isActive && affectedRail === "right" && torsionDisp > 0.05 && (
+                    <text x={tilt > 0 ? 30 : -30} y="15" fill="#e91e63" fontSize="9" fontWeight="bold">{torsionDisp.toFixed(2)}mm</text>
                   )}
                 </g>
               );
