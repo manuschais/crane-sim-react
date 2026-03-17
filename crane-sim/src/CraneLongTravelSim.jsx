@@ -343,32 +343,26 @@ const CraneLongTravelSim = () => {
           </div>
 
           <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 10 }}>
-            Hold to activate
+            Hold to run · Release = Auto Brake
           </div>
           <div style={styles.btnGroup}>
             <button
               type="button"
-              onPointerDown={() => setAccelMode(1)} onPointerUp={stopMove}
-              onPointerCancel={stopMove} onPointerLeave={stopMove}
-              style={{ ...styles.btn, backgroundColor: "#29b6f6" }}
+              onPointerDown={() => setAccelMode(1)}
+              onPointerUp={stopMove}
+              onPointerCancel={stopMove}
+              style={{ ...styles.btn, backgroundColor: accelMode === 1 ? "#0277bd" : "#29b6f6" }}
             >
-              Soft Start
+              Speed 1 (15 m/min)
             </button>
             <button
               type="button"
-              onPointerDown={() => setAccelMode(2)} onPointerUp={stopMove}
-              onPointerCancel={stopMove} onPointerLeave={stopMove}
-              style={{ ...styles.btn, backgroundColor: "#ef5350" }}
+              onPointerDown={() => setAccelMode(2)}
+              onPointerUp={stopMove}
+              onPointerCancel={stopMove}
+              style={{ ...styles.btn, backgroundColor: accelMode === 2 ? "#b71c1c" : "#ef5350" }}
             >
-              Hard Start
-            </button>
-            <button
-              type="button"
-              onPointerDown={() => setAccelMode(3)} onPointerUp={stopMove}
-              onPointerCancel={stopMove} onPointerLeave={stopMove}
-              style={{ ...styles.btn, backgroundColor: "#ff7043" }}
-            >
-              Brake
+              Speed 2 (30 m/min)
             </button>
           </div>
         </div>
