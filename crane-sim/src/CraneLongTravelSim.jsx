@@ -564,14 +564,22 @@ const CraneLongTravelSim = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#90a4ae" }}>
                   <span>2s (aggressive)</span><span>10s</span><span>20s (gentle)</span>
                 </div>
-                <button type="button" onClick={() => setSyncDrive(v => !v)} style={{
-                  padding: "5px 10px", borderRadius: 6, border: `2px solid ${syncDrive ? "#43a047" : "#b0bec5"}`,
-                  cursor: "pointer", fontWeight: "bold", fontSize: 11,
-                  backgroundColor: syncDrive ? "#e8f5e9" : "#f5f5f5",
-                  color: syncDrive ? "#2e7d32" : "#546e7a",
-                }}>
-                  {syncDrive ? "✓ Synchronized Dual Drive" : "Single Drive (no sync)"}
-                </button>
+                {/* Sync drive only applies to Long Travel (2 end-truck motors) */}
+                {mode === "long" && (
+                  <button type="button" onClick={() => setSyncDrive(v => !v)} style={{
+                    padding: "5px 10px", borderRadius: 6, border: `2px solid ${syncDrive ? "#43a047" : "#b0bec5"}`,
+                    cursor: "pointer", fontWeight: "bold", fontSize: 11,
+                    backgroundColor: syncDrive ? "#e8f5e9" : "#f5f5f5",
+                    color: syncDrive ? "#2e7d32" : "#546e7a",
+                  }}>
+                    {syncDrive ? "✓ Synchronized Dual Drive" : "Single Drive (no sync)"}
+                  </button>
+                )}
+                {mode === "cross" && (
+                  <div style={{ fontSize: 11, color: "#78909c", fontStyle: "italic" }}>
+                    Single motor (trolley) — ramp time controls accel only
+                  </div>
+                )}
               </div>
             )}
             {!hasVFD && (
