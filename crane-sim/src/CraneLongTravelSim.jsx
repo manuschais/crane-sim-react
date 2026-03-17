@@ -169,6 +169,25 @@ const ACCEL_SOFT  = SPEED_1_MS / T_SOFT  / G_MS2;  // ~0.0051g
 const ACCEL_HARD  = SPEED_2_MS / T_HARD  / G_MS2;  // ~0.0170g
 const ACCEL_BRAKE = SPEED_2_MS / T_BRAKE / G_MS2;  // ~0.0255g
 
+// ── Cross Travel (trolley on bridge girder) ──────────────────────────────
+// Bridge girder sections (JIS G3192-like WF, computed from dims)
+const BEAM_SECTIONS_CROSS = {
+  "H900×300": {
+    label: "H900×300 (H900×300×16×28)", Iy_cm4: 12629, depth: 900, tf: 28, tw: 16, b: 300,
+    J_mm4: 5543509, Cw_mm6: 2.394e13,
+  },
+  "H800×300": {
+    label: "H800×300 (H800×300×14×26)", Iy_cm4: 11717, depth: 800, tf: 26, tw: 14, b: 300,
+    J_mm4: 4199637, Cw_mm6: 1.717e13,
+  },
+};
+const BEAM_SPAN_CROSS_MM = 23600;       // crane span used as bridge girder span
+const SPEED_1_CROSS_MS   = 10 / 60;    // 10 m/min cross travel Speed 1
+const SPEED_2_CROSS_MS   = 20 / 60;    // 20 m/min cross travel Speed 2
+const ACCEL_SOFT_CROSS   = SPEED_1_CROSS_MS / T_SOFT  / G_MS2;
+const ACCEL_HARD_CROSS   = SPEED_2_CROSS_MS / T_HARD  / G_MS2;
+const ACCEL_BRAKE_CROSS  = SPEED_2_CROSS_MS / T_BRAKE / G_MS2;
+
 const CraneLongTravelSim = () => {
   const span = 23.6;
   const craneMass = 20.8;
@@ -182,6 +201,8 @@ const CraneLongTravelSim = () => {
   const [electrode, setElectrode] = useState("E7016");
   const [dir, setDir] = useState("forward");
   const [accelMode, setAccelMode] = useState(0); // 0=idle, 1=soft, 2=hard, 3=brake
+  const [mode, setMode] = useState("long");       // "long" | "cross"
+  const [beamKeyCross, setBeamKeyCross] = useState("H900×300");
 
   const [skewAngle, setSkewAngle] = useState(0);
   const [lateralForce, setLateralForce] = useState(0);
@@ -194,18 +215,32 @@ const CraneLongTravelSim = () => {
   const [affectedRail, setAffectedRail] = useState("none");
 
   useEffect(() => {
-    const totalLoad = load + trolleyMass;
-    const massLeft = craneMass / 2 + (totalLoad * (span - trolleyPos)) / span;
-    const massRight = craneMass / 2 + (totalLoad * trolleyPos) / span;
+    // ── Mode-dependent parameters ──────────────────────────────────────────
+    const sections  = mode === "long" ? BEAM_SECTIONS      : BEAM_SECTIONS_CROSS;
+    const bKey      = mode === "long" ? beamKey            : beamKeyCross;
+    const spanMM    = mode === "long" ? BEAM_SPAN_MM       : BEAM_SPAN_CROSS_MM;
+    const aSoft     = mode === "long" ? ACCEL_SOFT         : ACCEL_SOFT_CROSS;
+    const aHard     = mode === "long" ? ACCEL_HARD         : ACCEL_HARD_CROSS;
+    const aBrake    = mode === "long" ? ACCEL_BRAKE        : ACCEL_BRAKE_CROSS;
 
-    // Acceleration from real speed/ramp-time values
-    const accel =
-      accelMode === 1 ? ACCEL_SOFT  :
-      accelMode === 2 ? ACCEL_HARD  :
-      accelMode === 3 ? ACCEL_BRAKE : 0;
+    const accel = accelMode === 1 ? aSoft : accelMode === 2 ? aHard : accelMode === 3 ? aBrake : 0;
 
-    const forceReqL = massLeft * accel;
-    const forceReqR = massRight * accel;
+    // ── Mass distribution ──────────────────────────────────────────────────
+    // Long Travel: crane body + trolley + load, asymmetric by trolley position
+    // Cross Travel: trolley + load only, symmetric (skew is purely inertia-driven)
+    let massLeft, massRight;
+    if (mode === "long") {
+      const totalLoad = load + trolleyMass;
+      massLeft  = craneMass / 2 + (totalLoad * (span - trolleyPos)) / span;
+      massRight = craneMass / 2 + (totalLoad * trolleyPos) / span;
+    } else {
+      const half = (load + trolleyMass) / 2;
+      massLeft  = half;
+      massRight = half;
+    }
+
+    const forceReqL  = massLeft  * accel;
+    const forceReqR  = massRight * accel;
     const inertiaDiff = Math.abs(forceReqL - forceReqR);
 
     let sideThrust = inertiaDiff * 1.5;
@@ -214,73 +249,64 @@ const CraneLongTravelSim = () => {
       sideThrust += vertWheelLoad * 0.05;
     }
 
-    // K from actual beam section + tie-back contribution
-    const sec = BEAM_SECTIONS[beamKey];
-    const kBeam = calcKbeam(sec.Iy_cm4);
-    const kStiffness = hasTieBack ? kBeam + K_TIEBACK_ADDON : kBeam;
-    const beamDispMm = (sideThrust / kStiffness) * 10;
+    // ── Lateral stiffness + beam displacement (actual, mm) ────────────────
+    const sec      = sections[bKey];
+    const kBeam    = calcKbeam(sec.Iy_cm4);
+    const kBeamFn  = (Iy) => {
+      const Iy_mm4   = Iy * 1e4;
+      return (48 * E_STEEL * Iy_mm4) / (spanMM ** 3) / 9810;
+    };
+    const kBeamActual  = kBeamFn(sec.Iy_cm4);
+    const kStiffness   = hasTieBack ? kBeamActual + K_TIEBACK_ADDON : kBeamActual;
+    const beamDispMm   = sideThrust / kStiffness;  // actual lateral deflection (mm)
 
-    // --- Torsional calculation ---
-    // Welded bottom flange → pivot at bottom flange centroid (not shear center)
-    // e = bottom flange centroid → rail top
-    const e_mm = sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM;
-    // Torsional moment (N·mm): side thrust ton → N × eccentricity
-    const T_Nmm = sideThrust * 9810 * e_mm;
-    // Welded plate = warping restrained at both ends → 4π² (not π²)
-    const kTors = G_STEEL * sec.J_mm4 + 4 * Math.PI ** 2 * E_STEEL * sec.Cw_mm6 / BEAM_SPAN_MM ** 2;
-    // φ (rad) — midspan concentrated torque, warping-fixed beam
-    const phi_rad = (T_Nmm * BEAM_SPAN_MM) / (4 * kTors);
+    // ── Torsional calculation ──────────────────────────────────────────────
+    const e_mm    = sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM;
+    const T_Nmm   = sideThrust * 9810 * e_mm;
+    const kTors   = G_STEEL * sec.J_mm4 + 4 * Math.PI ** 2 * E_STEEL * sec.Cw_mm6 / spanMM ** 2;
+    const phi_rad = (T_Nmm * spanMM) / (4 * kTors);
     const phi_deg = phi_rad * (180 / Math.PI);
-    // Lateral shift at rail top from rotation (mm)
-    const torsionDispMm = phi_rad * e_mm;
+    const torsionDispMm  = phi_rad * e_mm;
     const totalTopDispMm = beamDispMm + torsionDispMm;
 
     setTorsionDisp(torsionDispMm);
     setTotalTopDisp(totalTopDispMm);
     setTwistAngleDeg(phi_deg);
 
-    // --- Weld stress at bottom flange connection ---
-    // Tie-back takes a fraction of side thrust proportional to stiffness
-    const kBeamOnly = calcKbeam(sec.Iy_cm4);
+    // ── Weld stress ────────────────────────────────────────────────────────
+    const kBeamOnly    = kBeamActual;
     const fractionToWeld = hasTieBack ? kBeamOnly / (kBeamOnly + K_TIEBACK_ADDON) : 1.0;
     const F_weld_N  = sideThrust * 9810 * fractionToWeld;
-    // Moment component perpendicular to weld: F_M = T_weld / b_flange
     const F_M_N     = F_weld_N * e_mm / sec.b;
     const F_res_N   = Math.sqrt(F_weld_N ** 2 + F_M_N ** 2);
-    const a_weld    = 0.707 * weldSize;          // throat (mm)
-    const A_weld    = 2 * sec.b * a_weld;        // both sides of flange (mm²)
-    const tau       = F_res_N / A_weld;           // MPa
-    const tau_allow = WELD_ALLOW[electrode];
+    const a_weld    = 0.707 * weldSize;
+    const A_weld    = 2 * sec.b * a_weld;
+    const tau       = F_res_N / A_weld;
     setWeldStress(tau);
-    setWeldUtil(tau / tau_allow * 100);
+    setWeldUtil(tau / WELD_ALLOW[electrode] * 100);
 
-    // Direction and phase determine skew sign:
-    // - forward=+1, backward=-1
-    // - accelerating=+1, braking reverses inertia=-1
-    // - heavier side (massLeft > massRight → left lags → CCW skew = negative in SVG)
-    const dirSign = dir === "forward" ? 1 : -1;
-    const phaseSign = accelMode === 3 ? -1 : 1;
-    const massAsymSign = Math.sign(massRight - massLeft); // positive = right heavier → CW skew
-    const skewSign = dirSign * phaseSign * massAsymSign;
+    // ── Skew sign ──────────────────────────────────────────────────────────
+    const dirSign      = dir === "forward" ? 1 : -1;
+    const phaseSign    = accelMode === 3 ? -1 : 1;
+    // Cross Travel has no positional mass asymmetry → use dirSign only (always +1 for skew magnitude)
+    const massAsymSign = mode === "cross" ? 1 : Math.sign(massRight - massLeft);
+    const skewSign     = dirSign * phaseSign * massAsymSign;
 
     const signedThrust = skewSign * sideThrust;
-    const rawAngle = skewSign * sideThrust * 2;
+    const rawAngle     = skewSign * sideThrust * 2;
 
     setLateralForce(signedThrust);
     setBeamTwist(beamDispMm);
     setSkewAngle(clamp(rawAngle, -12, 12));
 
-    // The rail that receives side thrust from wheel flange contact:
-    // CW skew (skewAngle>0) = left end leads → left-front wheel inner flange bites LEFT rail
-    // CCW skew (skewAngle<0) = right end leads → right-front wheel inner flange bites RIGHT rail
     if (sideThrust < 0.01) {
       setAffectedRail("none");
     } else if (signedThrust > 0) {
-      setAffectedRail("left");  // CW skew → left rail bites
+      setAffectedRail("left");
     } else {
-      setAffectedRail("right"); // CCW skew → right rail bites
+      setAffectedRail("right");
     }
-  }, [load, trolleyPos, accelMode, hasTieBack, beamKey, dir, weldSize, electrode]);
+  }, [load, trolleyPos, accelMode, hasTieBack, beamKey, beamKeyCross, dir, weldSize, electrode, mode]);
 
   const brakeTimer = useRef(null);
 
@@ -294,7 +320,11 @@ const CraneLongTravelSim = () => {
   // Cleanup timer on unmount
   useEffect(() => () => clearTimeout(brakeTimer.current), []);
 
-  const isCritical = totalTopDisp > 6.0;
+  // Thresholds use actual physical values (beamDispMm no longer 10× exaggerated)
+  // Long Travel runway beam: ~L/500 = 5000/500 = 10mm is concern, use 3mm as warning
+  // Cross Travel bridge girder: 23600/500 = 47mm, use 25mm as warning
+  const criticalThreshold = mode === "long" ? 3.0 : 25.0;
+  const isCritical = totalTopDisp > criticalThreshold;
   const isActive = accelMode > 0;
 
   const phaseLabel =
@@ -314,12 +344,16 @@ const CraneLongTravelSim = () => {
   const biteX = biteLeft ? 30 : 345;
   const dragX = biteLeft ? 345 : 30;
 
-  const sec = BEAM_SECTIONS[beamKey];
-  const e_display = Math.round(sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM);
-  const weldColor = weldUtil < 50 ? "#43a047" : weldUtil < 80 ? "#fb8c00" : "#e53935";
-  // Visual rotation angle for End Truck / Welded Base SVG (pivot = bottom flange)
-  const dispSign       = lateralForce > 0 ? 1 : lateralForce < 0 ? -1 : 0;
-  const rotAngle       = dispSign * totalTopDisp * 0.25; // visual scale (beam disp already 10x exaggerated)
+  const currentSections = mode === "long" ? BEAM_SECTIONS : BEAM_SECTIONS_CROSS;
+  const currentBKey     = mode === "long" ? beamKey       : beamKeyCross;
+  const sec             = currentSections[currentBKey];
+  const e_display       = Math.round(sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM);
+  const weldColor       = weldUtil < 50 ? "#43a047" : weldUtil < 80 ? "#fb8c00" : "#e53935";
+  // Visual rotation: use physical torsion angle scaled for visibility
+  // Long Travel: phi_deg ~0.05-0.3° → scale ×25; Cross Travel: phi_deg ~1-3° → scale ×2
+  const rotScale = mode === "long" ? 25 : 2;
+  const dispSign = lateralForce > 0 ? 1 : lateralForce < 0 ? -1 : 0;
+  const rotAngle = dispSign * Math.min(twistAngleDeg * rotScale, 6);
   const leftTilt       = affectedRail === "left"  ? rotAngle : 0;
   const rightTilt      = affectedRail === "right" ? rotAngle : 0;
   const leftWeldColor  = affectedRail === "left"  ? weldColor : "#43a047";
@@ -327,11 +361,29 @@ const CraneLongTravelSim = () => {
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.header}>Long Travel Skew Simulation — 25 Ton Overhead Crane</h2>
+      <h2 style={styles.header}>
+        {mode === "long" ? "Long Travel Skew" : "Cross Travel Skew"} — 25 Ton Overhead Crane
+      </h2>
 
       <div style={styles.mainGrid}>
       {/* ═══ LEFT PANEL — Controls ═══ */}
       <div style={styles.leftPanel}>
+
+        {/* Mode Toggle */}
+        <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", border: "2px solid #b0bec5", flexShrink: 0 }}>
+          {[["long", "▶▶ Long Travel", "Crane along runway"], ["cross", "↔ Cross Travel", "Trolley along bridge"]].map(([m, label, sub]) => (
+            <button key={m} type="button" onClick={() => setMode(m)} style={{
+              flex: 1, padding: "8px 4px", border: "none", cursor: "pointer",
+              fontWeight: "bold", fontSize: 12,
+              backgroundColor: mode === m ? "#0277bd" : "#eceff1",
+              color: mode === m ? "white" : "#546e7a",
+              lineHeight: 1.3,
+            }}>
+              {label}<br/><span style={{ fontSize: 10, fontWeight: "normal" }}>{sub}</span>
+            </button>
+          ))}
+        </div>
+
         {/* Load */}
         <div style={styles.inputGroup}>
           <div style={styles.label}>
@@ -346,52 +398,58 @@ const CraneLongTravelSim = () => {
           />
         </div>
 
-        {/* Trolley Position */}
-        <div style={styles.inputGroup}>
-          <div style={styles.label}>
-            <span>Trolley Position</span>
-            <span>{trolleyPos.toFixed(1)} m (from left)</span>
+        {/* Trolley Position — Long Travel only (affects runway beam load distribution) */}
+        {mode === "long" && (
+          <div style={styles.inputGroup}>
+            <div style={styles.label}>
+              <span>Trolley Position</span>
+              <span>{trolleyPos.toFixed(1)} m (from left)</span>
+            </div>
+            <input
+              aria-label="Trolley position"
+              type="range" min="1" max={span - 1} step="0.5" value={trolleyPos}
+              onChange={(e) => setTrolleyPos(Number(e.target.value))}
+              style={styles.slider}
+            />
+            <div style={{ fontSize: 12, color: "#78909c", display: "flex", justifyContent: "space-between" }}>
+              <span>Left Rail: Heavier</span>
+              <span>Right Rail: Heavier</span>
+            </div>
           </div>
-          <input
-            aria-label="Trolley position"
-            type="range" min="1" max={span - 1} step="0.5" value={trolleyPos}
-            onChange={(e) => setTrolleyPos(Number(e.target.value))}
-            style={styles.slider}
-          />
-          <div style={{ fontSize: 12, color: "#78909c", display: "flex", justifyContent: "space-between" }}>
-            <span>Left Rail: Heavier</span>
-            <span>Right Rail: Heavier</span>
-          </div>
-        </div>
+        )}
 
         {/* Beam Section Selector */}
         <div style={styles.inputGroup}>
           <div style={styles.label}>
-            <span>Runway Beam Section</span>
+            <span>{mode === "long" ? "Runway Beam" : "Bridge Girder"}</span>
             <span style={{ color: "#00838f" }}>
-              K = {calcKbeam(BEAM_SECTIONS[beamKey].Iy_cm4).toFixed(3)} ton/mm
+              K = {calcKbeam(sec.Iy_cm4).toFixed(4)} ton/mm
             </span>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            {Object.keys(BEAM_SECTIONS).map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setBeamKey(key)}
-                style={{
-                  flex: 1, padding: "10px 8px", borderRadius: 8, border: "2px solid",
-                  cursor: "pointer", fontWeight: "bold", fontSize: 13,
-                  borderColor: beamKey === key ? "#00838f" : "#b0bec5",
-                  backgroundColor: beamKey === key ? "#e0f2f1" : "#f5f5f5",
-                  color: beamKey === key ? "#00695c" : "#546e7a",
-                }}
-              >
-                {key}
-                <div style={{ fontSize: 11, fontWeight: "normal", marginTop: 2 }}>
-                  I_y = {BEAM_SECTIONS[key].Iy_cm4.toLocaleString()} cm⁴
-                </div>
-              </button>
-            ))}
+          <div style={{ display: "flex", gap: 8 }}>
+            {Object.keys(currentSections).map((key) => {
+              const active = currentBKey === key;
+              return (
+                <button key={key} type="button"
+                  onClick={() => mode === "long" ? setBeamKey(key) : setBeamKeyCross(key)}
+                  style={{
+                    flex: 1, padding: "8px 6px", borderRadius: 8, border: "2px solid",
+                    cursor: "pointer", fontWeight: "bold", fontSize: 12,
+                    borderColor: active ? "#00838f" : "#b0bec5",
+                    backgroundColor: active ? "#e0f2f1" : "#f5f5f5",
+                    color: active ? "#00695c" : "#546e7a",
+                  }}
+                >
+                  {key}
+                  <div style={{ fontSize: 10, fontWeight: "normal", marginTop: 2 }}>
+                    I_y = {currentSections[key].Iy_cm4.toLocaleString()} cm⁴
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 11, color: "#78909c", marginTop: 2 }}>
+            {mode === "long" ? `Span ${BEAM_SPAN_MM/1000}m runway` : `Span ${BEAM_SPAN_CROSS_MM/1000}m bridge girder`}
           </div>
         </div>
 
@@ -449,29 +507,21 @@ const CraneLongTravelSim = () => {
             Direction of Travel
           </div>
           <div style={{ display: "flex", justifyContent: "center", gap: 10, marginBottom: 16 }}>
-            <button
-              type="button"
-              onClick={() => setDir("forward")}
-              style={{
-                ...styles.dirBtn,
-                backgroundColor: dir === "forward" ? "#0288d1" : "#eceff1",
-                color: dir === "forward" ? "white" : "#546e7a",
-                borderColor: dir === "forward" ? "#0288d1" : "#b0bec5",
-              }}
-            >
-              ▶ Forward
+            <button type="button" onClick={() => setDir("forward")} style={{
+              ...styles.dirBtn,
+              backgroundColor: dir === "forward" ? "#0288d1" : "#eceff1",
+              color: dir === "forward" ? "white" : "#546e7a",
+              borderColor: dir === "forward" ? "#0288d1" : "#b0bec5",
+            }}>
+              {mode === "long" ? "▶ Forward" : "▶ Right"}
             </button>
-            <button
-              type="button"
-              onClick={() => setDir("backward")}
-              style={{
-                ...styles.dirBtn,
-                backgroundColor: dir === "backward" ? "#0288d1" : "#eceff1",
-                color: dir === "backward" ? "white" : "#546e7a",
-                borderColor: dir === "backward" ? "#0288d1" : "#b0bec5",
-              }}
-            >
-              ◀ Backward
+            <button type="button" onClick={() => setDir("backward")} style={{
+              ...styles.dirBtn,
+              backgroundColor: dir === "backward" ? "#0288d1" : "#eceff1",
+              color: dir === "backward" ? "white" : "#546e7a",
+              borderColor: dir === "backward" ? "#0288d1" : "#b0bec5",
+            }}>
+              {mode === "long" ? "◀ Backward" : "◀ Left"}
             </button>
           </div>
 
@@ -486,7 +536,7 @@ const CraneLongTravelSim = () => {
               onPointerCancel={stopMove}
               style={{ ...styles.btn, backgroundColor: accelMode === 1 ? "#0277bd" : "#29b6f6" }}
             >
-              Speed 1 (15 m/min)
+              {mode === "long" ? "Speed 1 (15 m/min)" : "Speed 1 (10 m/min)"}
             </button>
             <button
               type="button"
@@ -495,7 +545,7 @@ const CraneLongTravelSim = () => {
               onPointerCancel={stopMove}
               style={{ ...styles.btn, backgroundColor: accelMode === 2 ? "#b71c1c" : "#ef5350" }}
             >
-              Speed 2 (30 m/min)
+              {mode === "long" ? "Speed 2 (30 m/min)" : "Speed 2 (20 m/min)"}
             </button>
           </div>
         </div>
@@ -505,13 +555,11 @@ const CraneLongTravelSim = () => {
       <div style={styles.rightPanel}>
 
       {/* Alerts — always rendered to prevent layout jump */}
-      {isActive && Math.abs(trolleyPos - span / 2) > 5 ? (
-        <div style={styles.skewAlert}>
-          ⚠ Warning: Unbalanced load — skew and flange grinding likely.
-        </div>
+      {(mode === "long" && isActive && Math.abs(trolleyPos - span / 2) > 5) ? (
+        <div style={styles.skewAlert}>⚠ Warning: Unbalanced load — skew and flange grinding likely.</div>
       ) : (
         <div style={{ ...styles.skewAlert, backgroundColor: "#e8f5e9", color: "#388e3c", border: "1px solid #c8e6c9" }}>
-          ✓ OK — Load balanced
+          ✓ {mode === "long" ? "OK — Load balanced" : "Cross Travel mode — symmetric trolley load"}
         </div>
       )}
 
@@ -521,8 +569,8 @@ const CraneLongTravelSim = () => {
         {/* Combined Left + Right Support View */}
         <div style={styles.card}>
           <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 6, fontSize: 13, width: "100%", display: "flex", justifyContent: "space-between" }}>
-            <span>Welded Base — Left &amp; Right Rail</span>
-            <span style={{ fontSize: 11, color: "#78909c" }}>{beamKey} · e={e_display}mm</span>
+            <span>{mode === "long" ? "Welded Base — Left & Right Runway" : "End Truck — Left & Right Bridge Girder"}</span>
+            <span style={{ fontSize: 11, color: "#78909c" }}>{currentBKey} · e={e_display}mm</span>
           </div>
           <svg width="420" height="280" viewBox="0 0 420 280" style={{display:"block", flexShrink:0}}>
             <defs>
@@ -540,7 +588,7 @@ const CraneLongTravelSim = () => {
                 <g transform={`translate(${cx},0)`}>
                   {/* Column */}
                   <rect x="-32" y="218" width="64" height="58" fill="#90a4ae" rx="3"/>
-                  <text x="0" y="253" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">L-COL</text>
+                  <text x="0" y="253" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">{mode === "long" ? "L-COL" : "L-ET"}</text>
                   {/* Bearing plate */}
                   <rect x="-50" y="205" width="100" height="13" fill="#546e7a" rx="2"/>
                   {/* Fillet welds */}
@@ -576,7 +624,9 @@ const CraneLongTravelSim = () => {
 
             {/* SPAN LINE */}
             <line x1="142" y1="26" x2="278" y2="26" stroke="#b0bec5" strokeWidth="1.5" strokeDasharray="6,3"/>
-            <text x="210" y="22" textAnchor="middle" fill="#90a4ae" fontSize="9">SPAN {span}m</text>
+            <text x="210" y="22" textAnchor="middle" fill="#90a4ae" fontSize="9">
+              {mode === "long" ? `SPAN ${BEAM_SPAN_MM/1000}m runway` : `SPAN ${BEAM_SPAN_CROSS_MM/1000}m bridge`}
+            </text>
 
             {/* RIGHT SUPPORT — cx=330 */}
             {(() => {
@@ -585,7 +635,7 @@ const CraneLongTravelSim = () => {
               return (
                 <g transform={`translate(${cx},0)`}>
                   <rect x="-32" y="218" width="64" height="58" fill="#90a4ae" rx="3"/>
-                  <text x="0" y="253" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">R-COL</text>
+                  <text x="0" y="253" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">{mode === "long" ? "R-COL" : "R-ET"}</text>
                   <rect x="-50" y="205" width="100" height="13" fill="#546e7a" rx="2"/>
                   <polygon points={`-50,205 -32,205 -50,191`} fill={wc} opacity="0.95"/>
                   <polygon points={`50,205 32,205 50,191`}     fill={wc} opacity="0.95"/>
@@ -616,7 +666,9 @@ const CraneLongTravelSim = () => {
             <line x1="30" y1="276" x2="390" y2="276" stroke="#90a4ae" strokeWidth="2"/>
           </svg>
           <div style={{ fontSize: 11, color: "#78909c" }}>
-            Affected rail tilts · Other rail stays straight · Weld % = utilization
+            {mode === "long"
+              ? "Affected runway rail tilts inward · Weld % = utilization"
+              : "Affected bridge girder tilts · End truck connection stress"}
           </div>
         </div>
 
@@ -646,7 +698,7 @@ const CraneLongTravelSim = () => {
           {/* Torsion */}
           <div style={{ width: "100%", marginBottom: 8, padding: "8px 10px", backgroundColor: "#fff3e0", borderRadius: 8 }}>
             <div style={{ fontSize: 11, color: "#78909c" }}>
-              Torsion at Rail Top — Welded Base
+              Torsion at Rail Top — {mode === "long" ? "Welded Base" : "End Truck"}
               <span style={{ marginLeft: 6, color: "#e65100" }}>
                 e = {Math.round(BEAM_SECTIONS[beamKey].depth - BEAM_SECTIONS[beamKey].tf / 2 + RAIL_HEIGHT_MM)} mm
               </span>
@@ -731,7 +783,7 @@ const CraneLongTravelSim = () => {
                     )}
                     {hasTieBack && (
                       <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>
-                        Tie-back installed — weld load reduced to {(calcKbeam(BEAM_SECTIONS[beamKey].Iy_cm4) / (calcKbeam(BEAM_SECTIONS[beamKey].Iy_cm4) + K_TIEBACK_ADDON) * 100).toFixed(1)}%
+                        Tie-back installed — weld load reduced to {(calcKbeam(sec.Iy_cm4) / (calcKbeam(sec.Iy_cm4) + K_TIEBACK_ADDON) * 100).toFixed(1)}%
                       </span>
                     )}
                     {weldUtil <= 100 && weldUtil > 0 && !fatigueRisk && (

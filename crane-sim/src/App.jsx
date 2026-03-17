@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import CraneLongTravelSim from "./CraneLongTravelSim";
-import CranePeakHoldSim from "./CraneCrossTravelSim";
 
 const styles = {
   shell: {
@@ -45,13 +44,11 @@ const styles = {
 const VIEWS = {
   home: "home",
   app1: "app1",
-  app2: "app2",
 };
 
 const PATHS = {
   [VIEWS.home]: "/",
   [VIEWS.app1]: "/app-1",
-  [VIEWS.app2]: "/app-2",
 };
 
 const BASE_URL = import.meta.env.BASE_URL || "/";
@@ -122,34 +119,19 @@ export default function App() {
     );
   }
 
-  if (view === VIEWS.app2) {
-    return (
-      <div style={styles.shell}>
-        <div style={styles.topBar}>
-          <button type="button" style={styles.backBtn} onClick={() => navigateTo(VIEWS.home)}>
-            Back to Home
-          </button>
-        </div>
-        <CranePeakHoldSim />
-      </div>
-    );
-  }
-
   return (
     <div style={styles.shell}>
       <div style={styles.container}>
-        <h1 style={styles.title}>Crane Simulation Hub</h1>
-        <p style={styles.subtitle}>Choose an app to open</p>
+        <h1 style={styles.title}>Crane Skew Simulation</h1>
+        <p style={styles.subtitle}>25 Ton Overhead Crane — Long Travel &amp; Cross Travel</p>
 
         <div style={styles.grid}>
-          <button type="button" style={styles.cardBtn} onClick={() => navigateTo(VIEWS.app1)}>
-            <p style={styles.cardTitle}>App 1: Long Travel Skew</p>
-            <p style={styles.cardDesc}>Simulate effects of load, trolley position, and tie-back during long-travel motion.</p>
-          </button>
-
-          <button type="button" style={styles.cardBtn} onClick={() => navigateTo(VIEWS.app2)}>
-            <p style={styles.cardTitle}>App 2: Cross Travel Skew</p>
-            <p style={styles.cardDesc}>Test two speed modes with peak hold for displacement and side force.</p>
+          <button type="button" style={{ ...styles.cardBtn, gridColumn: "1 / -1" }} onClick={() => navigateTo(VIEWS.app1)}>
+            <p style={styles.cardTitle}>Long Travel &amp; Cross Travel Skew</p>
+            <p style={styles.cardDesc}>
+              Switch between Long Travel (crane on runway beams) and Cross Travel (trolley on bridge girder).
+              Analyse side thrust, torsion, lateral deflection, and weld stress with tie-back comparison.
+            </p>
           </button>
         </div>
       </div>
