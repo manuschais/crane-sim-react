@@ -97,17 +97,20 @@ const styles = {
 const BEAM_SECTIONS = {
   "H600×300": {
     label: "H600×300 (H588×300×12×20)",
-    Iy_cm4: 9010, depth: 588, tf: 20, tw: 12,
+    Iy_cm4: 9010, depth: 588, tf: 20, tw: 12, b: 300,
     J_mm4: 1915755,
     Cw_mm6: 7.259e12,
   },
   "H500×300": {
     label: "H500×300 (H488×300×11×18)",
-    Iy_cm4: 8110, depth: 488, tf: 18, tw: 11,
+    Iy_cm4: 8110, depth: 488, tf: 18, tw: 11, b: 300,
     J_mm4: 1366937,
     Cw_mm6: 4.473e12,
   },
 };
+
+// Weld allowable shear stress (AWS D1.1 / AISC)
+const WELD_ALLOW = { E6013: 0.3 * 420, E7016: 0.3 * 480 }; // MPa
 
 // Lateral stiffness: K = 48EI_y/L³  (simply supported, 5m span)
 // K[N/mm] → K[ton/mm] ÷ 9810
@@ -144,6 +147,8 @@ const CraneLongTravelSim = () => {
   const [trolleyPos, setTrolleyPos] = useState(3.0);
   const [hasTieBack, setHasTieBack] = useState(false);
   const [beamKey, setBeamKey] = useState("H600×300");
+  const [weldSize, setWeldSize] = useState(8);
+  const [electrode, setElectrode] = useState("E7016");
   const [dir, setDir] = useState("forward");
   const [accelMode, setAccelMode] = useState(0); // 0=idle, 1=soft, 2=hard, 3=brake
 
@@ -153,6 +158,8 @@ const CraneLongTravelSim = () => {
   const [torsionDisp, setTorsionDisp] = useState(0);
   const [totalTopDisp, setTotalTopDisp] = useState(0);
   const [twistAngleDeg, setTwistAngleDeg] = useState(0);
+  const [weldStress, setWeldStress] = useState(0);
+  const [weldUtil, setWeldUtil] = useState(0);
   const [affectedRail, setAffectedRail] = useState("none");
 
   useEffect(() => {
@@ -201,6 +208,21 @@ const CraneLongTravelSim = () => {
     setTotalTopDisp(totalTopDispMm);
     setTwistAngleDeg(phi_deg);
 
+    // --- Weld stress at bottom flange connection ---
+    // Tie-back takes a fraction of side thrust proportional to stiffness
+    const kBeamOnly = calcKbeam(sec.Iy_cm4);
+    const fractionToWeld = hasTieBack ? kBeamOnly / (kBeamOnly + K_TIEBACK_ADDON) : 1.0;
+    const F_weld_N  = sideThrust * 9810 * fractionToWeld;
+    // Moment component perpendicular to weld: F_M = T_weld / b_flange
+    const F_M_N     = F_weld_N * e_mm / sec.b;
+    const F_res_N   = Math.sqrt(F_weld_N ** 2 + F_M_N ** 2);
+    const a_weld    = 0.707 * weldSize;          // throat (mm)
+    const A_weld    = 2 * sec.b * a_weld;        // both sides of flange (mm²)
+    const tau       = F_res_N / A_weld;           // MPa
+    const tau_allow = WELD_ALLOW[electrode];
+    setWeldStress(tau);
+    setWeldUtil(tau / tau_allow * 100);
+
     // Direction and phase determine skew sign:
     // - forward=+1, backward=-1
     // - accelerating=+1, braking reverses inertia=-1
@@ -225,7 +247,7 @@ const CraneLongTravelSim = () => {
     } else {
       setAffectedRail("left");  // CCW skew pushes toward left rail
     }
-  }, [load, trolleyPos, accelMode, hasTieBack, dir]);
+  }, [load, trolleyPos, accelMode, hasTieBack, beamKey, dir, weldSize, electrode]);
 
   const brakeTimer = useRef(null);
 
@@ -344,6 +366,34 @@ const CraneLongTravelSim = () => {
           >
             {hasTieBack ? "Installed (Safer)" : "Not Installed (Risky)"}
           </button>
+        </div>
+
+        {/* Weld Settings */}
+        <div style={styles.inputGroup}>
+          <div style={styles.label}><span>Weld at Bottom Flange</span></div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: "#78909c", marginBottom: 4 }}>Fillet Weld Size</div>
+              <select
+                value={weldSize}
+                onChange={(e) => setWeldSize(Number(e.target.value))}
+                style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid #b0bec5", fontSize: 14 }}
+              >
+                {[6, 8, 10, 12].map(s => <option key={s} value={s}>{s} mm</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: "#78909c", marginBottom: 4 }}>Electrode</div>
+              <select
+                value={electrode}
+                onChange={(e) => setElectrode(e.target.value)}
+                style={{ width: "100%", padding: "8px", borderRadius: 6, border: "1px solid #b0bec5", fontSize: 14 }}
+              >
+                <option value="E6013">E6013 (τ=126 MPa)</option>
+                <option value="E7016">E7016 (τ=144 MPa)</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Direction + Action buttons */}
@@ -597,6 +647,71 @@ const CraneLongTravelSim = () => {
               No tie-back: Side thrust twists the structure.
             </div>
           )}
+        </div>
+
+        {/* Weld Stress Card */}
+        <div style={{ ...styles.card, gridColumn: "1 / -1" }}>
+          <div style={{ width: "100%", marginBottom: 10 }}>
+            <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 6 }}>
+              Weld Stress — Bottom Flange to Column Plate
+              <span style={{ fontSize: 12, fontWeight: "normal", color: "#78909c", marginLeft: 8 }}>
+                Fillet {weldSize}mm · {electrode} · τ_allow = {WELD_ALLOW[electrode]} MPa
+              </span>
+            </div>
+
+            {/* Stress bar */}
+            {(() => {
+              const pct = Math.min(weldUtil, 150);
+              const barColor = weldUtil < 50 ? "#43a047" : weldUtil < 80 ? "#fb8c00" : "#e53935";
+              const fatigueRisk = weldUtil > 20 && !hasTieBack;
+              return (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: "bold", color: barColor }}>
+                      τ = {weldStress.toFixed(1)} MPa
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: "bold", color: barColor }}>
+                      {weldUtil.toFixed(0)}% Utilization
+                    </span>
+                  </div>
+                  <div style={{ width: "100%", height: 18, backgroundColor: "#eceff1", borderRadius: 9, overflow: "hidden" }}>
+                    <div style={{
+                      width: `${pct}%`, height: "100%", borderRadius: 9,
+                      backgroundColor: barColor,
+                      transition: "width 0.3s, background-color 0.3s",
+                    }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#90a4ae", marginTop: 2 }}>
+                    <span>0</span><span>50%</span><span>80%</span><span>100%</span>
+                  </div>
+
+                  {/* Status messages */}
+                  <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                    {weldUtil > 100 && (
+                      <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#ffebee", color: "#c62828", fontSize: 12, fontWeight: "bold" }}>
+                        OVERSTRESSED — weld will fail
+                      </span>
+                    )}
+                    {fatigueRisk && (
+                      <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#fff3e0", color: "#e65100", fontSize: 12, fontWeight: "bold" }}>
+                        FATIGUE RISK — cyclic loading without tie-back causes cracking
+                      </span>
+                    )}
+                    {hasTieBack && (
+                      <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>
+                        Tie-back installed — weld load reduced to {(calcKbeam(BEAM_SECTIONS[beamKey].Iy_cm4) / (calcKbeam(BEAM_SECTIONS[beamKey].Iy_cm4) + K_TIEBACK_ADDON) * 100).toFixed(1)}%
+                      </span>
+                    )}
+                    {weldUtil <= 100 && weldUtil > 0 && !fatigueRisk && (
+                      <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>
+                        PASS — static capacity OK
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         </div>
       </div>
     </div>
