@@ -273,10 +273,16 @@ const CraneLongTravelSim = () => {
     const beamDispMm   = sideThrust / kStiffness;  // actual lateral deflection (mm)
 
     // ── Torsional calculation ──────────────────────────────────────────────
-    const e_mm    = sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM;
-    const T_Nmm   = sideThrust * 9810 * e_mm;
-    const kTors   = G_STEEL * sec.J_mm4 + 4 * Math.PI ** 2 * E_STEEL * sec.Cw_mm6 / spanMM ** 2;
-    const phi_rad = (T_Nmm * spanMM) / (4 * kTors);
+    const e_mm  = sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM;
+    const T_Nmm = sideThrust * 9810 * e_mm;
+    // Long Travel: bottom flange WELDED to column plate → warping restrained both ends
+    //   kTors = GJ + 4π²ECw/L²  (fixed-fixed warping)  φ = TL/(4kTors)
+    // Cross Travel: girder end rests on END TRUCK SADDLE (bearing/pin) → warping FREE
+    //   kTors = GJ + π²ECw/L²   (pin-pin warping free)  φ = TL/(8kTors)
+    const warpFactor = mode === "long" ? 4 : 1;   // 4π² vs π²
+    const phiDenom   = mode === "long" ? 4 : 8;   // denominator in φ formula
+    const kTors   = G_STEEL * sec.J_mm4 + warpFactor * Math.PI ** 2 * E_STEEL * sec.Cw_mm6 / spanMM ** 2;
+    const phi_rad = (T_Nmm * spanMM) / (phiDenom * kTors);
     const phi_deg = phi_rad * (180 / Math.PI);
     const torsionDispMm  = phi_rad * e_mm;
     const totalTopDispMm = beamDispMm + torsionDispMm;
@@ -771,9 +777,9 @@ const CraneLongTravelSim = () => {
           {/* Torsion */}
           <div style={{ width: "100%", marginBottom: 8, padding: "8px 10px", backgroundColor: "#fff3e0", borderRadius: 8 }}>
             <div style={{ fontSize: 11, color: "#78909c" }}>
-              Torsion at Rail Top — {mode === "long" ? "Welded Base" : "End Truck"}
+              Torsion at Rail Top — {mode === "long" ? "Welded Base (4π²)" : "End Truck Bearing (π²)"}
               <span style={{ marginLeft: 6, color: "#e65100" }}>
-                e = {Math.round(BEAM_SECTIONS[beamKey].depth - BEAM_SECTIONS[beamKey].tf / 2 + RAIL_HEIGHT_MM)} mm
+                e = {e_display} mm
               </span>
             </div>
             <div style={{ fontSize: 22, fontWeight: "800", color: "#e65100" }}>
@@ -810,9 +816,9 @@ const CraneLongTravelSim = () => {
         <div style={styles.card}>
           <div style={{ width: "100%", marginBottom: 10 }}>
             <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 6 }}>
-              Weld Stress — Bottom Flange to Column Plate
+              {mode === "long" ? "Weld Stress — Bottom Flange to Column Plate" : "End Connection Stress — Girder to End Truck"}
               <span style={{ fontSize: 12, fontWeight: "normal", color: "#78909c", marginLeft: 8 }}>
-                Fillet {weldSize}mm · {electrode} · τ_allow = {WELD_ALLOW[electrode]} MPa
+                {mode === "long" ? "Fillet" : "End plate fillet"} {weldSize}mm · {electrode} · τ_allow = {WELD_ALLOW[electrode]} MPa
               </span>
             </div>
 
