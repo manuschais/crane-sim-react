@@ -342,8 +342,6 @@ const CraneLongTravelSim = () => {
   // Thresholds use actual physical values (beamDispMm no longer 10× exaggerated)
   // Long Travel runway beam: ~L/500 = 5000/500 = 10mm is concern, use 3mm as warning
   // Cross Travel bridge girder: 23600/500 = 47mm, use 25mm as warning
-  const criticalThreshold = mode === "long" ? 3.0 : 25.0;
-  const isCritical = totalTopDisp > criticalThreshold;
   const isActive = accelMode > 0;
 
   const phaseLabel =
@@ -791,17 +789,6 @@ const CraneLongTravelSim = () => {
             </div>
           </div>
 
-          {/* Total Top Displacement */}
-          <div style={{ width: "100%", marginBottom: 12, padding: "8px 10px", backgroundColor: isCritical ? "#ffebee" : "#e8f5e9", borderRadius: 8 }}>
-            <div style={{ fontSize: 11, color: "#78909c" }}>Total Shift at Rail Top</div>
-            <div style={{ fontSize: 28, fontWeight: "900", color: isCritical ? "#d32f2f" : "#2e7d32" }}>
-              {totalTopDisp.toFixed(2)}
-              <span style={{ fontSize: 15 }}> mm</span>
-            </div>
-            <div style={{ fontSize: 11, fontWeight: "bold", color: isCritical ? "#c62828" : "#388e3c" }}>
-              {isCritical ? "DANGER: Severe rail & wheel wear" : "SAFE: Normal wear range"}
-            </div>
-          </div>
 
           {!hasTieBack && (
             <div style={{ fontSize: 11, color: "#d32f2f" }}>
