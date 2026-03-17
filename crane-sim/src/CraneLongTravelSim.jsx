@@ -217,7 +217,7 @@ const CraneLongTravelSim = () => {
   const [sqtPattern, setSqtPattern] = useState("continuous");
   const [sqtOn, setSqtOn] = useState(50);
   const [sqtGap, setSqtGap] = useState(500);
-  const [cyclesPerYear, setCyclesPerYear] = useState(15000);
+  const [cyclesPerYear, setCyclesPerYear] = useState(21000);
   const [sqtStress, setSqtStress] = useState(0);
   const [sqtUtil, setSqtUtil] = useState(0);
   const [sqtFatigueUtil, setSqtFatigueUtil] = useState(0);
