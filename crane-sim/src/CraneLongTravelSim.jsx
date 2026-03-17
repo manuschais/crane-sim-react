@@ -51,7 +51,7 @@ const styles = {
     fontSize: "13px",
   },
   slider: { width: "100%", accentColor: "#00838f", height: "6px", cursor: "pointer" },
-  vizRow: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" },
+  vizRow: { display: "grid", gridTemplateColumns: "2fr 1fr", gap: "14px" },
   card: {
     backgroundColor: "white",
     padding: "16px",
@@ -305,8 +305,12 @@ const CraneLongTravelSim = () => {
   const e_display = Math.round(sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM);
   const weldColor = weldUtil < 50 ? "#43a047" : weldUtil < 80 ? "#fb8c00" : "#e53935";
   // Visual rotation angle for End Truck / Welded Base SVG (pivot = bottom flange)
-  const dispSign  = lateralForce > 0 ? 1 : lateralForce < 0 ? -1 : 0;
-  const rotAngle  = dispSign * totalTopDisp * 1.5; // visual scale, not physical
+  const dispSign       = lateralForce > 0 ? 1 : lateralForce < 0 ? -1 : 0;
+  const rotAngle       = dispSign * totalTopDisp * 1.5; // visual scale, not physical
+  const leftTilt       = affectedRail === "left"  ? rotAngle : 0;
+  const rightTilt      = affectedRail === "right" ? rotAngle : 0;
+  const leftWeldColor  = affectedRail === "left"  ? weldColor : "#43a047";
+  const rightWeldColor = affectedRail === "right" ? weldColor : "#43a047";
 
   return (
     <div style={styles.container}>
@@ -497,12 +501,107 @@ const CraneLongTravelSim = () => {
         {/* 3-card row: End Truck | Welded Base | Data Panel */}
         <div style={styles.vizRow}>
 
-        {/* End Truck View — pivot at welded bottom flange */}
+        {/* Combined Left + Right Support View */}
         <div style={styles.card}>
-          <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 6, fontSize: 13 }}>
-            End Truck — {affectedRail === "none" ? "Idle" : `${affectedRail.toUpperCase()} Rail`}
+          <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 6, fontSize: 13, width: "100%", display: "flex", justifyContent: "space-between" }}>
+            <span>Welded Base — Left &amp; Right Rail</span>
+            <span style={{ fontSize: 11, color: "#78909c" }}>{beamKey} · e={e_display}mm</span>
           </div>
-          <svg width="100%" viewBox="-110 -130 220 310">
+          <svg width="100%" viewBox="0 0 420 280">
+            <defs>
+              <marker id="arr-thrust" markerWidth="7" markerHeight="5" refX="0" refY="2.5" orient="auto">
+                <polygon points="0 0,7 2.5,0 5" fill="#c62828"/>
+              </marker>
+            </defs>
+
+            {/* ── Reusable support template via <g transform="translate(cx,0)"> ── */}
+            {/* LEFT SUPPORT — cx=90 */}
+            {(() => {
+              const cx = 90; const tilt = leftTilt; const wc = leftWeldColor;
+              const ry = 205; // y of bottom of bottom flange (pivot)
+              return (
+                <g transform={`translate(${cx},0)`}>
+                  {/* Column */}
+                  <rect x="-32" y="218" width="64" height="58" fill="#90a4ae" rx="3"/>
+                  <text x="0" y="253" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">L-COL</text>
+                  {/* Bearing plate */}
+                  <rect x="-50" y="205" width="100" height="13" fill="#546e7a" rx="2"/>
+                  {/* Fillet welds */}
+                  <polygon points={`-50,205 -32,205 -50,191`} fill={wc} opacity="0.95"/>
+                  <polygon points={`50,205 32,205 50,191`}     fill={wc} opacity="0.95"/>
+                  {/* STATIC: Bottom flange */}
+                  <rect x="-52" y="191" width="104" height="14" fill="#37474f" rx="2"/>
+                  <text x="0" y="201" textAnchor="middle" fill="#cfd8dc" fontSize="6">WELDED</text>
+                  {/* DYNAMIC: rotate about (0, ry) */}
+                  <g transform={`rotate(${tilt}, 0, ${ry})`}>
+                    <rect x="-8" y="70" width="16" height="121" fill="#546e7a"/>
+                    <rect x="-52" y="57" width="104" height="13" fill="#37474f" rx="2"/>
+                    <rect x="-18" y="33" width="36" height="24" fill="#e65100" rx="2"/>
+                    <text x="0" y="48" textAnchor="middle" fill="white" fontSize="7">RAIL</text>
+                    <ellipse cx="0" cy="20" rx="22" ry="9" fill="#b0bec5" stroke="#78909c" strokeWidth="2"/>
+                    {hasTieBack && <line x1="-100" y1="63" x2="-52" y2="63" stroke="#43a047" strokeWidth="4"/>}
+                  </g>
+                  {/* Side thrust arrow (when left rail affected) */}
+                  {isActive && affectedRail === "left" && (
+                    <line x1="-75" y1="26" x2="-52" y2="26" stroke="#c62828" strokeWidth="2.5" markerEnd="url(#arr-thrust)"/>
+                  )}
+                  {/* Weld % label */}
+                  {affectedRail === "left" && weldUtil > 0 && (
+                    <text x="0" y="200" textAnchor="middle" fill={wc} fontSize="8" fontWeight="bold">{weldUtil.toFixed(0)}%</text>
+                  )}
+                  {/* Displacement label */}
+                  {isActive && affectedRail === "left" && totalTopDisp > 0.2 && (
+                    <text x={tilt > 0 ? 30 : -30} y="15" fill="#e91e63" fontSize="9" fontWeight="bold">{totalTopDisp.toFixed(1)}mm</text>
+                  )}
+                </g>
+              );
+            })()}
+
+            {/* SPAN LINE */}
+            <line x1="142" y1="26" x2="278" y2="26" stroke="#b0bec5" strokeWidth="1.5" strokeDasharray="6,3"/>
+            <text x="210" y="22" textAnchor="middle" fill="#90a4ae" fontSize="9">SPAN {span}m</text>
+
+            {/* RIGHT SUPPORT — cx=330 */}
+            {(() => {
+              const cx = 330; const tilt = rightTilt; const wc = rightWeldColor;
+              const ry = 205;
+              return (
+                <g transform={`translate(${cx},0)`}>
+                  <rect x="-32" y="218" width="64" height="58" fill="#90a4ae" rx="3"/>
+                  <text x="0" y="253" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">R-COL</text>
+                  <rect x="-50" y="205" width="100" height="13" fill="#546e7a" rx="2"/>
+                  <polygon points={`-50,205 -32,205 -50,191`} fill={wc} opacity="0.95"/>
+                  <polygon points={`50,205 32,205 50,191`}     fill={wc} opacity="0.95"/>
+                  <rect x="-52" y="191" width="104" height="14" fill="#37474f" rx="2"/>
+                  <text x="0" y="201" textAnchor="middle" fill="#cfd8dc" fontSize="6">WELDED</text>
+                  <g transform={`rotate(${tilt}, 0, ${ry})`}>
+                    <rect x="-8" y="70" width="16" height="121" fill="#546e7a"/>
+                    <rect x="-52" y="57" width="104" height="13" fill="#37474f" rx="2"/>
+                    <rect x="-18" y="33" width="36" height="24" fill="#e65100" rx="2"/>
+                    <text x="0" y="48" textAnchor="middle" fill="white" fontSize="7">RAIL</text>
+                    <ellipse cx="0" cy="20" rx="22" ry="9" fill="#b0bec5" stroke="#78909c" strokeWidth="2"/>
+                    {hasTieBack && <line x1="52" y1="63" x2="100" y2="63" stroke="#43a047" strokeWidth="4"/>}
+                  </g>
+                  {isActive && affectedRail === "right" && (
+                    <line x1="75" y1="26" x2="52" y2="26" stroke="#c62828" strokeWidth="2.5" markerEnd="url(#arr-thrust)"/>
+                  )}
+                  {affectedRail === "right" && weldUtil > 0 && (
+                    <text x="0" y="200" textAnchor="middle" fill={wc} fontSize="8" fontWeight="bold">{weldUtil.toFixed(0)}%</text>
+                  )}
+                  {isActive && affectedRail === "right" && totalTopDisp > 0.2 && (
+                    <text x={tilt > 0 ? 30 : -30} y="15" fill="#e91e63" fontSize="9" fontWeight="bold">{totalTopDisp.toFixed(1)}mm</text>
+                  )}
+                </g>
+              );
+            })()}
+
+            {/* Ground line */}
+            <line x1="30" y1="276" x2="390" y2="276" stroke="#90a4ae" strokeWidth="2"/>
+          </svg>
+          <div style={{ fontSize: 11, color: "#78909c" }}>
+            Affected rail tilts · Other rail stays straight · Weld % = utilization
+          </div>
+        </div>
             {/* Center reference line — static */}
             <line x1="0" y1="-120" x2="0" y2="90" stroke="#cfd8dc" strokeDasharray="4" strokeWidth="1"/>
 
@@ -550,96 +649,6 @@ const CraneLongTravelSim = () => {
                 </text>
               </g>
             )}
-          </svg>
-          <div style={{ fontSize: 11, color: "#78909c" }}>Bottom Fixed · Top Swings</div>
-        </div>
-
-        {/* Welded Base View */}
-        <div style={styles.card}>
-          <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 6, fontSize: 13 }}>
-            Welded Base Detail
-          </div>
-          <svg width="100%" viewBox="0 0 200 310" style={{ maxHeight: 260 }}>
-            {/* Column */}
-            <rect x="60" y="230" width="80" height="75" fill="#90a4ae" rx="3"/>
-            <text x="100" y="275" textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">COLUMN</text>
-
-            {/* Bearing Plate */}
-            <rect x="35" y="213" width="130" height="17" fill="#546e7a" rx="2"/>
-            <text x="100" y="225" textAnchor="middle" fill="white" fontSize="9">Bearing Plate</text>
-
-            {/* Fillet Welds — colored by stress */}
-            <polygon points="35,213 55,213 35,196" fill={weldColor} opacity="0.9"/>
-            <polygon points="165,213 145,213 165,196" fill={weldColor} opacity="0.9"/>
-            <text x="100" y="209" textAnchor="middle" fill={weldColor} fontSize="9" fontWeight="bold">
-              ▲ Weld {weldUtil.toFixed(0)}%
-            </text>
-
-            {/* STATIC: Bottom Flange — welded, does not move */}
-            <rect x="28" y="183" width="144" height="13" fill="#37474f" rx="2"/>
-            <text x="100" y="193" textAnchor="middle" fill="#cfd8dc" fontSize="7">WELDED</text>
-
-            {/* DYNAMIC: Web + Top Flange + Rail — rotate about bottom of bottom flange (100,196) */}
-            <g transform={`rotate(${rotAngle * 0.6}, 100, 196)`}>
-            {/* Web */}
-            <rect x="87" y={sec.depth > 540 ? 68 : 88} width="26"
-              height={sec.depth > 540 ? 115 : 95} fill="#546e7a"/>
-
-            {/* Top Flange */}
-            <rect x="28" y={sec.depth > 540 ? 55 : 75} width="144" height="13" fill="#37474f" rx="2"/>
-
-            {/* Rail (square bar 60mm) */}
-            <rect x="76" y={sec.depth > 540 ? 30 : 50} width="48" height="25" fill="#e65100" rx="2"/>
-            <text x="100" y={sec.depth > 540 ? 45 : 65} textAnchor="middle" fill="white" fontSize="8">RAIL</text>
-
-            {/* Wheel */}
-            <ellipse cx="100" cy={sec.depth > 540 ? 22 : 42} rx="22" ry="10" fill="#b0bec5" stroke="#78909c" strokeWidth="2"/>
-            </g>{/* end dynamic */}
-
-            {/* Side Thrust arrow */}
-            <defs>
-              <marker id="arr-red2" markerWidth="7" markerHeight="5" refX="0" refY="2.5" orient="auto">
-                <polygon points="0 0,7 2.5,0 5" fill="#c62828"/>
-              </marker>
-            </defs>
-            {isActive && lateralForce !== 0 && (
-              <line
-                x1={lateralForce > 0 ? 175 : 25}
-                y1={sec.depth > 540 ? 37 : 57}
-                x2={lateralForce > 0 ? 148 : 52}
-                y2={sec.depth > 540 ? 37 : 57}
-                stroke="#c62828" strokeWidth="2.5"
-                markerEnd="url(#arr-red2)"
-              />
-            )}
-
-            {/* e dimension line */}
-            <line x1="18" y1="200" x2="18" y2={sec.depth > 540 ? 37 : 57}
-              stroke="#e91e63" strokeWidth="1.5" strokeDasharray="4,3"/>
-            <line x1="12" y1="200" x2="24" y2="200" stroke="#e91e63" strokeWidth="1.5"/>
-            <line x1="12" y1={sec.depth > 540 ? 37 : 57}
-              x2="24" y2={sec.depth > 540 ? 37 : 57} stroke="#e91e63" strokeWidth="1.5"/>
-            <text x="8" y={(200 + (sec.depth > 540 ? 37 : 57)) / 2}
-              textAnchor="middle" fill="#e91e63" fontSize="9" fontWeight="bold"
-              transform={`rotate(-90,8,${(200 + (sec.depth > 540 ? 37 : 57)) / 2})`}>
-              e={e_display}mm
-            </text>
-
-            {/* Tie-back rod */}
-            {hasTieBack && (
-              <>
-                <line x1="28" y1={sec.depth > 540 ? 62 : 82} x2="0" y2={sec.depth > 540 ? 62 : 82}
-                  stroke="#43a047" strokeWidth="4"/>
-                <rect x="-4" y={sec.depth > 540 ? 56 : 76} width="4" height="12" fill="#43a047"/>
-                <text x="14" y={sec.depth > 540 ? 55 : 75} fill="#43a047" fontSize="8" fontWeight="bold">TB</text>
-              </>
-            )}
-
-            {/* Section label */}
-            <text x="196" y="100" textAnchor="end" fill="#78909c" fontSize="9">{beamKey}</text>
-          </svg>
-          <div style={{ fontSize: 11, color: "#78909c" }}>Support at Column</div>
-        </div>
 
         {/* Data Panel */}
         <div style={styles.card}>
