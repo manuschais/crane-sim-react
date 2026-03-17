@@ -200,6 +200,9 @@ const CraneLongTravelSim = () => {
   const [beamKey, setBeamKey] = useState("H600×300");
   const [weldSize, setWeldSize] = useState(8);
   const [electrode, setElectrode] = useState("E7016");
+  const [weldPattern, setWeldPattern] = useState("continuous"); // "continuous" | "intermittent"
+  const [weldOn, setWeldOn] = useState(50);   // mm weld length
+  const [weldGap, setWeldGap] = useState(150); // mm gap between welds
   const [dir, setDir] = useState("forward");
   const [accelMode, setAccelMode] = useState(0); // 0=idle, 1=soft, 2=hard, 3=brake
   const [mode, setMode] = useState("long");       // "long" | "cross"
@@ -215,6 +218,7 @@ const CraneLongTravelSim = () => {
   const [twistAngleDeg, setTwistAngleDeg] = useState(0);
   const [weldStress, setWeldStress] = useState(0);
   const [weldUtil, setWeldUtil] = useState(0);
+  const [weldFatigueUtil, setWeldFatigueUtil] = useState(0);
   const [affectedRail, setAffectedRail] = useState("none");
 
   useEffect(() => {
@@ -307,10 +311,14 @@ const CraneLongTravelSim = () => {
     const F_M_N     = F_weld_N * e_mm / sec.b;
     const F_res_N   = Math.sqrt(F_weld_N ** 2 + F_M_N ** 2);
     const a_weld    = 0.707 * weldSize;
-    const A_weld    = 2 * sec.b * a_weld;
+    const weldRatio = weldPattern === "continuous" ? 1.0 : weldOn / (weldOn + weldGap);
+    const A_weld    = 2 * sec.b * a_weld * weldRatio;
     const tau       = F_res_N / A_weld;
+    // Fatigue allowable: continuous → Category D (55 MPa), intermittent → Category E (18 MPa)
+    const tauFatigueAllow = weldPattern === "continuous" ? 55 : 18;
     setWeldStress(tau);
     setWeldUtil(tau / WELD_ALLOW[electrode] * 100);
+    setWeldFatigueUtil(tau / tauFatigueAllow * 100);
 
     // ── Skew sign ──────────────────────────────────────────────────────────
     const dirSign      = dir === "forward" ? 1 : -1;
@@ -334,7 +342,7 @@ const CraneLongTravelSim = () => {
     } else {
       setAffectedRail("right");
     }
-  }, [load, trolleyPos, accelMode, hasTieBack, beamKey, beamKeyCross, dir, weldSize, electrode, mode, hasVFD, vfdRamp, syncDrive]);
+  }, [load, trolleyPos, accelMode, hasTieBack, beamKey, beamKeyCross, dir, weldSize, electrode, mode, hasVFD, vfdRamp, syncDrive, weldPattern, weldOn, weldGap]);
 
   const brakeTimer = useRef(null);
 
@@ -523,6 +531,43 @@ const CraneLongTravelSim = () => {
                 <option value="E7016">E7016 (τ=144 MPa)</option>
               </select>
             </div>
+          </div>
+          {/* Weld Pattern */}
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 12, color: "#78909c", marginBottom: 4 }}>Weld Pattern</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["continuous", "intermittent"].map(p => (
+                <button key={p} onClick={() => setWeldPattern(p)}
+                  style={{ flex: 1, padding: "7px 4px", borderRadius: 6, border: "1px solid #b0bec5", cursor: "pointer", fontSize: 12, fontWeight: "bold",
+                    backgroundColor: weldPattern === p ? "#37474f" : "#f5f5f5",
+                    color: weldPattern === p ? "white" : "#546e7a" }}>
+                  {p === "continuous" ? "Continuous" : "Intermittent"}
+                </button>
+              ))}
+            </div>
+            {weldPattern === "intermittent" && (
+              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 11, color: "#78909c", marginBottom: 2 }}>Weld length (mm)</div>
+                  <select value={weldOn} onChange={e => setWeldOn(Number(e.target.value))}
+                    style={{ width: "100%", padding: "6px", borderRadius: 6, border: "1px solid #b0bec5", fontSize: 13 }}>
+                    {[25, 40, 50, 75, 100].map(v => <option key={v} value={v}>{v} mm</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 11, color: "#78909c", marginBottom: 2 }}>Gap (mm)</div>
+                  <select value={weldGap} onChange={e => setWeldGap(Number(e.target.value))}
+                    style={{ width: "100%", padding: "6px", borderRadius: 6, border: "1px solid #b0bec5", fontSize: 13 }}>
+                    {[100, 150, 200, 250, 300, 400, 500].map(v => <option key={v} value={v}>{v} mm</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+            {weldPattern === "intermittent" && (
+              <div style={{ fontSize: 11, color: "#78909c", marginTop: 4 }}>
+                Ratio {(weldOn / (weldOn + weldGap) * 100).toFixed(1)}% · Category E · τ_fatigue = 18 MPa
+              </div>
+            )}
           </div>
         </div>
 
@@ -815,6 +860,7 @@ const CraneLongTravelSim = () => {
               {mode === "long" ? "Weld Stress — Bottom Flange to Column Plate" : "End Connection Stress — Girder to End Truck"}
               <span style={{ fontSize: 12, fontWeight: "normal", color: "#78909c", marginLeft: 8 }}>
                 {mode === "long" ? "Fillet" : "End plate fillet"} {weldSize}mm · {electrode} · τ_allow = {WELD_ALLOW[electrode]} MPa
+                {weldPattern === "intermittent" && <span style={{ color: "#e65100" }}> · {weldOn}↔{weldGap}mm · ratio {(weldOn/(weldOn+weldGap)*100).toFixed(0)}%</span>}
               </span>
             </div>
 
@@ -844,16 +890,25 @@ const CraneLongTravelSim = () => {
                     <span>0</span><span>50%</span><span>80%</span><span>100%</span>
                   </div>
 
-                  {/* Status message — always one line, fixed height to prevent layout shift */}
-                  <div style={{ marginTop: 8, minHeight: 28 }}>
+                  {/* Status messages — fixed height to prevent layout shift */}
+                  <div style={{ marginTop: 8, minHeight: 52, display: "flex", flexDirection: "column", gap: 4 }}>
                     {(() => {
+                      const msgs = [];
                       if (weldUtil > 100)
-                        return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#ffebee", color: "#c62828", fontSize: 12, fontWeight: "bold" }}>OVERSTRESSED — weld will fail</span>;
-                      if (fatigueRisk)
-                        return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#fff3e0", color: "#e65100", fontSize: 12, fontWeight: "bold" }}>FATIGUE RISK — cyclic loading without tie-back causes cracking</span>;
-                      if (hasTieBack)
-                        return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>Tie-back installed — weld load reduced to {(calcKbeam(sec.Iy_cm4) / (calcKbeam(sec.Iy_cm4) + (mode === "long" ? K_TIEBACK_LONG : K_TIEBACK_CROSS)) * 100).toFixed(1)}%</span>;
-                      return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>PASS — static capacity OK</span>;
+                        msgs.push(<span key="over" style={{ padding: "3px 10px", borderRadius: 6, backgroundColor: "#ffebee", color: "#c62828", fontSize: 12, fontWeight: "bold" }}>OVERSTRESSED — static: {weldUtil.toFixed(0)}% (weld will fail)</span>);
+                      if (weldFatigueUtil > 100)
+                        msgs.push(<span key="fat" style={{ padding: "3px 10px", borderRadius: 6, backgroundColor: "#fff3e0", color: "#e65100", fontSize: 12, fontWeight: "bold" }}>FATIGUE FAIL — {weldPattern === "intermittent" ? "Cat.E" : "Cat.D"} {weldFatigueUtil.toFixed(0)}% (crack over time)</span>);
+                      else if (fatigueRisk && weldPattern === "intermittent")
+                        msgs.push(<span key="fatw" style={{ padding: "3px 10px", borderRadius: 6, backgroundColor: "#fff3e0", color: "#e65100", fontSize: 12, fontWeight: "bold" }}>FATIGUE RISK — intermittent weld Cat.E, no tie-back</span>);
+                      else if (fatigueRisk)
+                        msgs.push(<span key="fatw2" style={{ padding: "3px 10px", borderRadius: 6, backgroundColor: "#fff3e0", color: "#e65100", fontSize: 12, fontWeight: "bold" }}>FATIGUE RISK — cyclic loading without tie-back</span>);
+                      if (msgs.length === 0) {
+                        if (hasTieBack)
+                          msgs.push(<span key="tb" style={{ padding: "3px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>Tie-back installed — weld load reduced to {(calcKbeam(sec.Iy_cm4) / (calcKbeam(sec.Iy_cm4) + (mode === "long" ? K_TIEBACK_LONG : K_TIEBACK_CROSS)) * 100).toFixed(1)}%</span>);
+                        else
+                          msgs.push(<span key="pass" style={{ padding: "3px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>PASS — static OK · fatigue {weldFatigueUtil.toFixed(0)}% ({weldPattern === "intermittent" ? "Cat.E 18MPa" : "Cat.D 55MPa"})</span>);
+                      }
+                      return msgs;
                     })()}
                   </div>
                 </div>
