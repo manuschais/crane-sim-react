@@ -848,28 +848,17 @@ const CraneLongTravelSim = () => {
                     <span>0</span><span>50%</span><span>80%</span><span>100%</span>
                   </div>
 
-                  {/* Status messages */}
-                  <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                    {weldUtil > 100 && (
-                      <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#ffebee", color: "#c62828", fontSize: 12, fontWeight: "bold" }}>
-                        OVERSTRESSED — weld will fail
-                      </span>
-                    )}
-                    {fatigueRisk && (
-                      <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#fff3e0", color: "#e65100", fontSize: 12, fontWeight: "bold" }}>
-                        FATIGUE RISK — cyclic loading without tie-back causes cracking
-                      </span>
-                    )}
-                    {hasTieBack && (
-                      <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>
-                        Tie-back installed — weld load reduced to {(calcKbeam(sec.Iy_cm4) / (calcKbeam(sec.Iy_cm4) + K_TIEBACK_ADDON) * 100).toFixed(1)}%
-                      </span>
-                    )}
-                    {weldUtil <= 100 && weldUtil > 0 && !fatigueRisk && (
-                      <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>
-                        PASS — static capacity OK
-                      </span>
-                    )}
+                  {/* Status message — always one line, fixed height to prevent layout shift */}
+                  <div style={{ marginTop: 8, minHeight: 28 }}>
+                    {(() => {
+                      if (weldUtil > 100)
+                        return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#ffebee", color: "#c62828", fontSize: 12, fontWeight: "bold" }}>OVERSTRESSED — weld will fail</span>;
+                      if (fatigueRisk)
+                        return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#fff3e0", color: "#e65100", fontSize: 12, fontWeight: "bold" }}>FATIGUE RISK — cyclic loading without tie-back causes cracking</span>;
+                      if (hasTieBack)
+                        return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>Tie-back installed — weld load reduced to {(calcKbeam(sec.Iy_cm4) / (calcKbeam(sec.Iy_cm4) + K_TIEBACK_ADDON) * 100).toFixed(1)}%</span>;
+                      return <span style={{ padding: "4px 10px", borderRadius: 6, backgroundColor: "#e8f5e9", color: "#388e3c", fontSize: 12, fontWeight: "bold" }}>PASS — static capacity OK</span>;
+                    })()}
                   </div>
                 </div>
               );
