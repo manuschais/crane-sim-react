@@ -304,6 +304,9 @@ const CraneLongTravelSim = () => {
   const sec = BEAM_SECTIONS[beamKey];
   const e_display = Math.round(sec.depth - sec.tf / 2 + RAIL_HEIGHT_MM);
   const weldColor = weldUtil < 50 ? "#43a047" : weldUtil < 80 ? "#fb8c00" : "#e53935";
+  // Visual rotation angle for End Truck / Welded Base SVG (pivot = bottom flange)
+  const dispSign  = lateralForce > 0 ? 1 : lateralForce < 0 ? -1 : 0;
+  const rotAngle  = dispSign * totalTopDisp * 1.5; // visual scale, not physical
 
   return (
     <div style={styles.container}>
@@ -491,132 +494,64 @@ const CraneLongTravelSim = () => {
         </div>
       )}
 
-        {/* Top View */}
-        <div style={{ ...styles.card, backgroundColor: "#f5f5f5" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-            <span style={{ fontWeight: "bold", color: "#546e7a" }}>
-              Top View — Skew (clamped ±12°)
-            </span>
-            <span
-              style={{
-                ...styles.phaseBadge,
-                backgroundColor: phaseBadgeColor.bg,
-                color: phaseBadgeColor.color,
-              }}
-            >
-              {dir === "forward" ? "▶" : "◀"} {dir.charAt(0).toUpperCase() + dir.slice(1)} · {phaseLabel}
-            </span>
+        {/* 3-card row: End Truck | Welded Base | Data Panel */}
+        <div style={styles.vizRow}>
+
+        {/* End Truck View — pivot at welded bottom flange */}
+        <div style={styles.card}>
+          <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 6, fontSize: 13 }}>
+            End Truck — {affectedRail === "none" ? "Idle" : `${affectedRail.toUpperCase()} Rail`}
           </div>
+          <svg width="100%" viewBox="-110 -130 220 310">
+            {/* Center reference line — static */}
+            <line x1="0" y1="-120" x2="0" y2="90" stroke="#cfd8dc" strokeDasharray="4" strokeWidth="1"/>
 
-          <svg width="100%" height="160" viewBox="0 0 400 160">
-            {/* Rails */}
-            <line x1="20" y1="10" x2="20" y2="150" stroke="#b0bec5" strokeWidth="6" />
-            <line x1="380" y1="10" x2="380" y2="150" stroke="#b0bec5" strokeWidth="6" />
+            {/* STATIC: Column stub */}
+            <rect x="-42" y="95" width="84" height="70" fill="#90a4ae" rx="3"/>
+            <text x="0" y="138" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">COLUMN</text>
 
-            {/* Rail labels */}
-            <text x="20" y="8" textAnchor="middle" fill="#78909c" fontSize="10">L</text>
-            <text x="380" y="8" textAnchor="middle" fill="#78909c" fontSize="10">R</text>
+            {/* STATIC: Bearing Plate */}
+            <rect x="-70" y="78" width="140" height="17" fill="#546e7a" rx="2"/>
+            <text x="0" y="90" textAnchor="middle" fill="white" fontSize="8">Bearing Plate</text>
 
-            {/* Direction arrow on the affected rail */}
-            <defs>
-              <marker id="arrow-dir" markerWidth="8" markerHeight="6" refX="4" refY="3" orient="auto">
-                <polygon points="0 0, 8 3, 0 6" fill="#0288d1" />
-              </marker>
-              <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
-                <polygon points="0 0, 8 3, 0 6" fill="#c62828" />
-              </marker>
-            </defs>
+            {/* STATIC: Fillet welds — colored by stress */}
+            <polygon points="-70,78 -50,78 -70,62" fill={weldColor} opacity="0.95"/>
+            <polygon points="70,78 50,78 70,62" fill={weldColor} opacity="0.95"/>
 
-            {/* Direction of travel arrow */}
-            {dir === "forward" ? (
-              <line x1="200" y1="145" x2="200" y2="118" stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)" />
-            ) : (
-              <line x1="200" y1="15" x2="200" y2="42" stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)" />
-            )}
+            {/* STATIC: Bottom flange — welded, does NOT move */}
+            <rect x="-70" y="62" width="140" height="16" fill="#37474f" rx="2"/>
+            <text x="0" y="73" textAnchor="middle" fill="#cfd8dc" fontSize="7">WELDED</text>
 
-            {/* Crane beam (rotates to show skew) */}
-            <g transform={`rotate(${skewAngle}, 200, 80)`}>
-              <rect x="20" y="60" width="360" height="40" fill="#fbc02d" stroke="#f57f17" strokeWidth="2" rx="4" />
-              {/* Trolley */}
-              <circle cx={20 + (trolleyPos / span) * 360} cy="80" r="12" fill="#d32f2f" />
-
-              {/* BITE / DRAG labels */}
-              {isActive && Math.abs(skewAngle) > 0.1 && (
-                <>
-                  <circle cx={biteLeft ? 20 : 380} cy={fwdY < 60 ? 65 : 95} r="8"
-                    fill="transparent" stroke="#c62828" strokeWidth="4" />
-                  <text x={biteX} y={fwdY} fill="#c62828" fontSize="11" fontWeight="bold">BITE</text>
-                  <text x={dragX} y={rearY} fill="#546e7a" fontSize="11" fontWeight="bold">DRAG</text>
-                </>
+            {/* DYNAMIC: Web + Top Flange + Rail — rotate about bottom of bottom flange (0,78) */}
+            <g transform={`rotate(${rotAngle}, 0, 78)`}>
+              {/* Web */}
+              <rect x="-10" y="-52" width="20" height="114" fill="#546e7a"/>
+              {/* Top flange */}
+              <rect x="-70" y="-66" width="140" height="14" fill="#37474f" rx="2"/>
+              {/* Rail (square bar) */}
+              <rect x="-24" y="-93" width="48" height="27" fill="#e65100" rx="2"/>
+              <text x="0" y="-78" textAnchor="middle" fill="white" fontSize="7">RAIL</text>
+              {/* Wheel */}
+              <ellipse cx="0" cy="-107" rx="26" ry="11" fill="#b0bec5" stroke="#78909c" strokeWidth="2"/>
+              {/* Tie-back rod */}
+              {hasTieBack && (
+                <line x1="-110" y1="-59" x2="-70" y2="-59" stroke="#43a047" strokeWidth="5"/>
               )}
             </g>
 
-            {/* Side thrust arrow and label */}
-            {isActive && (
+            {/* Total displacement annotation */}
+            {totalTopDisp > 0.2 && (
               <g>
-                {lateralForce > 0 ? (
-                  <>
-                    <line x1="380" y1="80" x2="410" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)" />
-                    <text x="385" y="73" fill="#c62828" fontSize="11">
-                      {Math.abs(lateralForce).toFixed(2)}T →R
-                    </text>
-                  </>
-                ) : lateralForce < 0 ? (
-                  <>
-                    <line x1="20" y1="80" x2="-10" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)" />
-                    <text x="5" y="73" fill="#c62828" fontSize="11">
-                      L← {Math.abs(lateralForce).toFixed(2)}T
-                    </text>
-                  </>
-                ) : null}
-              </g>
-            )}
-          </svg>
-
-          {isActive && affectedRail !== "none" && (
-            <div style={{ fontSize: 12, color: "#c62828", marginTop: 4, fontWeight: "bold" }}>
-              Side thrust pressing on {affectedRail.toUpperCase()} rail flange
-            </div>
-          )}
-        </div>
-
-        {/* Bottom row: 3 cards */}
-        <div style={styles.vizRow}>
-
-        {/* Beam Twist View */}
-        <div style={styles.card}>
-          <div style={{ fontWeight: "bold", color: "#37474f", marginBottom: 8 }}>
-            End Truck View — {affectedRail === "none" ? "No Load" : `${affectedRail.toUpperCase()} Rail`}
-          </div>
-
-          <svg width="200" height="200" viewBox="-100 -100 200 200">
-            <line x1="0" y1="-80" x2="0" y2="80" stroke="#cfd8dc" strokeDasharray="4" />
-
-            <g transform={`rotate(${skewAngle > 0 ? beamTwist * 2 : -beamTwist * 2})`}>
-              <rect x="-30" y="-80" width="60" height="15" fill="#455a64" rx="2" />
-              <rect x="-30" y="60" width="60" height="15" fill="#455a64" rx="2" />
-              <rect x="-8" y="-65" width="16" height="125" fill="#546e7a" />
-              <rect x="-8" y="-95" width="16" height="15" fill="#e65100" />
-              {hasTieBack && <rect x="-90" y="-80" width="60" height="8" fill="#66bb6a" />}
-            </g>
-
-            {beamTwist > 0.5 && (
-              <g>
-                <line
-                  x1="0" y1="-110"
-                  x2={skewAngle > 0 ? beamTwist * 5 : -beamTwist * 5} y2="-110"
-                  stroke="#e91e63" strokeWidth="2"
-                />
-                <text
-                  x={skewAngle > 0 ? beamTwist * 2.5 : -beamTwist * 2.5}
-                  y="-120" textAnchor="middle" fill="#e91e63" fontWeight="bold"
-                >
-                  {beamTwist.toFixed(1)} mm
+                <line x1="0" y1="-120" x2={dispSign * Math.min(totalTopDisp * 7, 95)} y2="-120"
+                  stroke="#e91e63" strokeWidth="2"/>
+                <text x={dispSign * Math.min(totalTopDisp * 3.5, 47)} y="-124"
+                  textAnchor="middle" fill="#e91e63" fontSize="10" fontWeight="bold">
+                  {totalTopDisp.toFixed(1)} mm
                 </text>
               </g>
             )}
           </svg>
-          <div style={{ fontSize: 12, color: "#78909c" }}>Lateral Bending</div>
+          <div style={{ fontSize: 11, color: "#78909c" }}>Bottom Fixed · Top Swings</div>
         </div>
 
         {/* Welded Base View */}
@@ -640,9 +575,12 @@ const CraneLongTravelSim = () => {
               ▲ Weld {weldUtil.toFixed(0)}%
             </text>
 
-            {/* Bottom Flange */}
+            {/* STATIC: Bottom Flange — welded, does not move */}
             <rect x="28" y="183" width="144" height="13" fill="#37474f" rx="2"/>
+            <text x="100" y="193" textAnchor="middle" fill="#cfd8dc" fontSize="7">WELDED</text>
 
+            {/* DYNAMIC: Web + Top Flange + Rail — rotate about bottom of bottom flange (100,196) */}
+            <g transform={`rotate(${rotAngle * 0.6}, 100, 196)`}>
             {/* Web */}
             <rect x="87" y={sec.depth > 540 ? 68 : 88} width="26"
               height={sec.depth > 540 ? 115 : 95} fill="#546e7a"/>
@@ -656,6 +594,7 @@ const CraneLongTravelSim = () => {
 
             {/* Wheel */}
             <ellipse cx="100" cy={sec.depth > 540 ? 22 : 42} rx="22" ry="10" fill="#b0bec5" stroke="#78909c" strokeWidth="2"/>
+            </g>{/* end dynamic */}
 
             {/* Side Thrust arrow */}
             <defs>
@@ -827,6 +766,59 @@ const CraneLongTravelSim = () => {
             })()}
           </div>
         </div>
+        {/* Top View — bottom of right panel */}
+        <div style={{ ...styles.card, backgroundColor: "#f5f5f5" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6, width: "100%" }}>
+            <span style={{ fontWeight: "bold", color: "#546e7a" }}>Top View — Skew (clamped ±12°)</span>
+            <span style={{ ...styles.phaseBadge, backgroundColor: phaseBadgeColor.bg, color: phaseBadgeColor.color }}>
+              {dir === "forward" ? "▶" : "◀"} {dir.charAt(0).toUpperCase() + dir.slice(1)} · {phaseLabel}
+            </span>
+          </div>
+          <svg width="100%" height="160" viewBox="0 0 400 160">
+            <line x1="20" y1="10" x2="20" y2="150" stroke="#b0bec5" strokeWidth="6" />
+            <line x1="380" y1="10" x2="380" y2="150" stroke="#b0bec5" strokeWidth="6" />
+            <text x="20" y="8" textAnchor="middle" fill="#78909c" fontSize="10">L</text>
+            <text x="380" y="8" textAnchor="middle" fill="#78909c" fontSize="10">R</text>
+            <defs>
+              <marker id="arrow-dir" markerWidth="8" markerHeight="6" refX="4" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#0288d1" />
+              </marker>
+              <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#c62828" />
+              </marker>
+            </defs>
+            {dir === "forward"
+              ? <line x1="200" y1="145" x2="200" y2="118" stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)" />
+              : <line x1="200" y1="15"  x2="200" y2="42"  stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)" />
+            }
+            <g transform={`rotate(${skewAngle}, 200, 80)`}>
+              <rect x="20" y="60" width="360" height="40" fill="#fbc02d" stroke="#f57f17" strokeWidth="2" rx="4" />
+              <circle cx={20 + (trolleyPos / span) * 360} cy="80" r="12" fill="#d32f2f" />
+              {isActive && Math.abs(skewAngle) > 0.1 && (
+                <>
+                  <circle cx={biteLeft ? 20 : 380} cy={fwdY < 60 ? 65 : 95} r="8"
+                    fill="transparent" stroke="#c62828" strokeWidth="4" />
+                  <text x={biteX} y={fwdY} fill="#c62828" fontSize="11" fontWeight="bold">BITE</text>
+                  <text x={dragX} y={rearY} fill="#546e7a" fontSize="11" fontWeight="bold">DRAG</text>
+                </>
+              )}
+            </g>
+            {isActive && lateralForce > 0 && (
+              <><line x1="380" y1="80" x2="410" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)" />
+              <text x="385" y="73" fill="#c62828" fontSize="11">{Math.abs(lateralForce).toFixed(2)}T →R</text></>
+            )}
+            {isActive && lateralForce < 0 && (
+              <><line x1="20" y1="80" x2="-10" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)" />
+              <text x="5" y="73" fill="#c62828" fontSize="11">L← {Math.abs(lateralForce).toFixed(2)}T</text></>
+            )}
+          </svg>
+          {isActive && affectedRail !== "none" && (
+            <div style={{ fontSize: 12, color: "#c62828", marginTop: 4, fontWeight: "bold" }}>
+              Side thrust pressing on {affectedRail.toUpperCase()} rail flange
+            </div>
+          )}
+        </div>
+
       </div>{/* end rightPanel */}
       </div>{/* end mainGrid */}
     </div>
