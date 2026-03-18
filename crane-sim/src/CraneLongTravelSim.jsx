@@ -26,7 +26,7 @@ const styles = {
   },
   mainGrid: {
     display: "grid",
-    gridTemplateColumns: "320px 1fr",
+    gridTemplateColumns: "280px 320px 1fr",
     gap: "12px",
     alignItems: "stretch",
     flex: 1,
@@ -34,6 +34,18 @@ const styles = {
     minHeight: 0,
   },
   leftPanel: {
+    backgroundColor: "white",
+    padding: "14px",
+    borderRadius: "14px",
+    boxShadow: "0 4px 15px rgba(0,0,0,0.08)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    overflowY: "auto",
+    height: "100%",
+    boxSizing: "border-box",
+  },
+  middlePanel: {
     backgroundColor: "white",
     padding: "14px",
     borderRadius: "14px",
@@ -62,7 +74,7 @@ const styles = {
     fontSize: "13px",
   },
   slider: { width: "100%", accentColor: "#00838f", height: "6px", cursor: "pointer" },
-  vizRow: { display: "grid", gridTemplateColumns: "auto 1fr", gap: "12px", alignItems: "stretch", flexShrink: 0 },
+  vizRow: { display: "grid", gridTemplateColumns: "auto auto 1fr", gap: "12px", alignItems: "stretch", flexShrink: 0 },
   card: {
     backgroundColor: "white",
     padding: "12px",
@@ -507,6 +519,10 @@ const CraneLongTravelSim = () => {
             {hasTieBack ? "Installed (Safer)" : "Not Installed (Risky)"}
           </button>
         </div>
+      </div>{/* end leftPanel */}
+
+      {/* ═══ MIDDLE PANEL — Weld & Drive Settings ═══ */}
+      <div style={styles.middlePanel}>
 
         {/* SQT BAR Weld Settings */}
         <div style={styles.inputGroup}>
@@ -679,7 +695,7 @@ const CraneLongTravelSim = () => {
             </button>
           </div>
         </div>
-      </div>{/* end leftPanel */}
+      </div>{/* end middlePanel */}
 
       {/* ═══ RIGHT PANEL — Visualizations ═══ */}
       <div style={styles.rightPanel}>
@@ -859,9 +875,7 @@ const CraneLongTravelSim = () => {
           )}
         </div>
 
-        </div>{/* end vizRow */}
-
-        {/* SQT BAR weld check */}
+        {/* SQT BAR weld check — 3rd column of vizRow */}
         <div style={styles.card}>
           <div style={{ fontWeight: "bold", color: "#e65100", marginBottom: 6, fontSize: 13, width: "100%" }}>
             SQT BAR Weld — 60×60 Rail → WF Top Flange
@@ -915,6 +929,7 @@ const CraneLongTravelSim = () => {
             );
           })()}
         </div>
+        </div>{/* end vizRow */}
         {/* Top View — bottom of right panel */}
         <div style={{ ...styles.card, backgroundColor: "#f5f5f5" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6, width: "100%" }}>
