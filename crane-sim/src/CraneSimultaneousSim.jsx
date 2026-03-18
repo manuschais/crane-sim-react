@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 
 // ── Constants (same physical values as CraneLongTravelSim) ─────────────────
 const E_STEEL       = 200000; // N/mm²
@@ -215,20 +215,9 @@ export default function CraneSimultaneousSim() {
   const [wCT,      setWCT]      = useState({ tau: 0, util: 0, fatUtil: 0 });
   const [wComb,    setWComb]    = useState({ tau: 0, util: 0, fatUtil: 0 });
 
-  const ltTimer = useRef(null);
-  const ctTimer = useRef(null);
-
-  // Auto-brake on release
-  const stopLT = () => {
-    setLtLevel(3); // brake momentarily (reuse level 2 as brake — no separate accel state needed)
-    if (ltTimer.current) clearTimeout(ltTimer.current);
-    ltTimer.current = setTimeout(() => setLtLevel(0), 700);
-  };
-  const stopCT = () => {
-    setCtLevel(3);
-    if (ctTimer.current) clearTimeout(ctTimer.current);
-    ctTimer.current = setTimeout(() => setCtLevel(0), 700);
-  };
+  // Toggle helpers — click to activate, click same level again to stop
+  const toggleLT = (lvl) => setLtLevel(v => v === lvl ? 0 : lvl);
+  const toggleCT = (lvl) => setCtLevel(v => v === lvl ? 0 : lvl);
 
   // Physics
   useEffect(() => {
@@ -423,16 +412,15 @@ export default function CraneSimultaneousSim() {
               </>
             )}
 
-            {/* LT Speed buttons */}
+            {/* LT Speed buttons — toggle on/off */}
+            <div style={{ fontSize: 10, color: "#90a4ae", marginBottom: 3 }}>กดเปิด/ปิด (toggle)</div>
             <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
-              <button
-                onPointerDown={() => setLtLevel(1)} onPointerUp={stopLT} onPointerCancel={stopLT}
-                style={{ ...btnBase, backgroundColor: ltLevel === 1 ? "#0277bd" : "#29b6f6" }}>
+              <button onClick={() => toggleLT(1)}
+                style={{ ...btnBase, backgroundColor: ltLevel === 1 ? "#0277bd" : "#90caf9", boxShadow: ltLevel === 1 ? "0 0 0 3px #81d4fa" : "none" }}>
                 Speed 1<br/><span style={{ fontSize: 10, fontWeight: "normal" }}>15 m/min</span>
               </button>
-              <button
-                onPointerDown={() => setLtLevel(2)} onPointerUp={stopLT} onPointerCancel={stopLT}
-                style={{ ...btnBase, backgroundColor: ltLevel === 2 ? "#b71c1c" : "#ef5350" }}>
+              <button onClick={() => toggleLT(2)}
+                style={{ ...btnBase, backgroundColor: ltLevel === 2 ? "#b71c1c" : "#ef9a9a", boxShadow: ltLevel === 2 ? "0 0 0 3px #ffcdd2" : "none" }}>
                 Speed 2<br/><span style={{ fontSize: 10, fontWeight: "normal" }}>30 m/min</span>
               </button>
             </div>
@@ -486,16 +474,15 @@ export default function CraneSimultaneousSim() {
               </>
             )}
 
-            {/* CT Speed buttons */}
+            {/* CT Speed buttons — toggle on/off */}
+            <div style={{ fontSize: 10, color: "#90a4ae", marginBottom: 3 }}>กดเปิด/ปิด (toggle)</div>
             <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
-              <button
-                onPointerDown={() => setCtLevel(1)} onPointerUp={stopCT} onPointerCancel={stopCT}
-                style={{ ...btnBase, backgroundColor: ctLevel === 1 ? "#6a1b9a" : "#ab47bc" }}>
+              <button onClick={() => toggleCT(1)}
+                style={{ ...btnBase, backgroundColor: ctLevel === 1 ? "#6a1b9a" : "#ce93d8", boxShadow: ctLevel === 1 ? "0 0 0 3px #e1bee7" : "none" }}>
                 Speed 1<br/><span style={{ fontSize: 10, fontWeight: "normal" }}>10 m/min</span>
               </button>
-              <button
-                onPointerDown={() => setCtLevel(2)} onPointerUp={stopCT} onPointerCancel={stopCT}
-                style={{ ...btnBase, backgroundColor: ctLevel === 2 ? "#4a148c" : "#7b1fa2" }}>
+              <button onClick={() => toggleCT(2)}
+                style={{ ...btnBase, backgroundColor: ctLevel === 2 ? "#4a148c" : "#9c27b0", boxShadow: ctLevel === 2 ? "0 0 0 3px #d1c4e9" : "none" }}>
                 Speed 2<br/><span style={{ fontSize: 10, fontWeight: "normal" }}>20 m/min</span>
               </button>
             </div>
