@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import CraneLongTravelSim from "./CraneLongTravelSim";
+import CraneSimultaneousSim from "./CraneSimultaneousSim";
 
 const styles = {
   shell: {
@@ -44,11 +45,13 @@ const styles = {
 const VIEWS = {
   home: "home",
   app1: "app1",
+  app2: "app2",
 };
 
 const PATHS = {
   [VIEWS.home]: "/",
   [VIEWS.app1]: "/app-1",
+  [VIEWS.app2]: "/app-2",
 };
 
 const BASE_URL = import.meta.env.BASE_URL || "/";
@@ -91,7 +94,6 @@ export default function App() {
     const onPopState = () => {
       setView(getViewFromPath(window.location.pathname));
     };
-
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
@@ -99,7 +101,6 @@ export default function App() {
   const navigateTo = (nextView) => {
     const targetPath = PATHS[nextView] || PATHS.home;
     const nextUrl = buildUrl(targetPath);
-
     if (window.location.pathname !== nextUrl) {
       window.history.pushState({}, "", nextUrl);
     }
@@ -111,10 +112,23 @@ export default function App() {
       <div style={styles.shell}>
         <div style={styles.topBar}>
           <button type="button" style={styles.backBtn} onClick={() => navigateTo(VIEWS.home)}>
-            Back to Home
+            ← Home
           </button>
         </div>
         <CraneLongTravelSim />
+      </div>
+    );
+  }
+
+  if (view === VIEWS.app2) {
+    return (
+      <div style={styles.shell}>
+        <div style={styles.topBar}>
+          <button type="button" style={styles.backBtn} onClick={() => navigateTo(VIEWS.home)}>
+            ← Home
+          </button>
+        </div>
+        <CraneSimultaneousSim />
       </div>
     );
   }
@@ -123,14 +137,22 @@ export default function App() {
     <div style={styles.shell}>
       <div style={styles.container}>
         <h1 style={styles.title}>Crane Skew Simulation</h1>
-        <p style={styles.subtitle}>25 Ton Overhead Crane — Long Travel &amp; Cross Travel</p>
+        <p style={styles.subtitle}>25 Ton Overhead Crane — Weld Fatigue Analysis</p>
 
         <div style={styles.grid}>
           <button type="button" style={{ ...styles.cardBtn, gridColumn: "1 / -1" }} onClick={() => navigateTo(VIEWS.app1)}>
-            <p style={styles.cardTitle}>Long Travel &amp; Cross Travel Skew</p>
+            <p style={styles.cardTitle}>▶▶ Long Travel &amp; ↔ Cross Travel Skew</p>
             <p style={styles.cardDesc}>
-              Switch between Long Travel (crane on runway beams) and Cross Travel (trolley on bridge girder).
-              Analyse side thrust, torsion, lateral deflection, and weld stress with tie-back comparison.
+              Single-axis analysis — Switch between Long Travel (crane on runway) and Cross Travel (trolley on bridge girder).
+              Side thrust, torsion, lateral deflection, SQT BAR weld stress + fatigue life.
+            </p>
+          </button>
+
+          <button type="button" style={{ ...styles.cardBtn, gridColumn: "1 / -1", borderColor: "#fdba74", background: "#fff7ed" }} onClick={() => navigateTo(VIEWS.app2)}>
+            <p style={{ ...styles.cardTitle, color: "#c2410c" }}>⚡ Simultaneous Motion — LT × CT Combined Force</p>
+            <p style={styles.cardDesc}>
+              Both axes active at the same time — calculates vector sum F_combined = √(F_LT² + F_CT²).
+              Compares weld fatigue life: single-axis vs simultaneous operation. Shows the additional weld penalty (%).
             </p>
           </button>
         </div>
