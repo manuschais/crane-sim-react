@@ -931,6 +931,59 @@ const CraneLongTravelSim = () => {
         </div>
         </div>{/* end vizRow */}
 
+        {/* Top View — bottom of right panel */}
+        <div style={{ ...styles.card, backgroundColor: "#f5f5f5" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6, width: "100%" }}>
+            <span style={{ fontWeight: "bold", color: "#546e7a" }}>Top View — Skew (clamped ±12°)</span>
+            <span style={{ ...styles.phaseBadge, backgroundColor: phaseBadgeColor.bg, color: phaseBadgeColor.color }}>
+              {dir === "forward" ? "▶" : "◀"} {dir.charAt(0).toUpperCase() + dir.slice(1)} · {phaseLabel}
+            </span>
+          </div>
+          <svg width="100%" height="140" viewBox="0 0 400 160" style={{display:"block"}}>
+            <line x1="20" y1="10" x2="20" y2="150" stroke="#b0bec5" strokeWidth="6" />
+            <line x1="380" y1="10" x2="380" y2="150" stroke="#b0bec5" strokeWidth="6" />
+            <text x="20" y="8" textAnchor="middle" fill="#78909c" fontSize="10">L</text>
+            <text x="380" y="8" textAnchor="middle" fill="#78909c" fontSize="10">R</text>
+            <defs>
+              <marker id="arrow-dir" markerWidth="8" markerHeight="6" refX="4" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#0288d1" />
+              </marker>
+              <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#c62828" />
+              </marker>
+            </defs>
+            {dir === "forward"
+              ? <line x1="200" y1="145" x2="200" y2="118" stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)" />
+              : <line x1="200" y1="15"  x2="200" y2="42"  stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)" />
+            }
+            <g transform={`rotate(${skewAngle}, 200, 80)`}>
+              <rect x="20" y="60" width="360" height="40" fill="#fbc02d" stroke="#f57f17" strokeWidth="2" rx="4" />
+              <circle cx={20 + (trolleyPos / span) * 360} cy="80" r="12" fill="#d32f2f" />
+              {isActive && Math.abs(skewAngle) > 0.1 && (
+                <>
+                  <circle cx={biteLeft ? 20 : 380} cy={fwdY < 60 ? 65 : 95} r="8"
+                    fill="transparent" stroke="#c62828" strokeWidth="4" />
+                  <text x={biteX} y={fwdY} fill="#c62828" fontSize="11" fontWeight="bold">BITE</text>
+                  <text x={dragX} y={rearY} fill="#546e7a" fontSize="11" fontWeight="bold">DRAG</text>
+                </>
+              )}
+            </g>
+            {isActive && lateralForce > 0 && (
+              <><line x1="380" y1="80" x2="410" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)" />
+              <text x="385" y="73" fill="#c62828" fontSize="11">{Math.abs(lateralForce).toFixed(2)}T →R</text></>
+            )}
+            {isActive && lateralForce < 0 && (
+              <><line x1="20" y1="80" x2="-10" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)" />
+              <text x="5" y="73" fill="#c62828" fontSize="11">L← {Math.abs(lateralForce).toFixed(2)}T</text></>
+            )}
+          </svg>
+          {isActive && affectedRail !== "none" && (
+            <div style={{ fontSize: 12, color: "#c62828", marginTop: 4, fontWeight: "bold" }}>
+              Side thrust pressing on {affectedRail.toUpperCase()} rail flange
+            </div>
+          )}
+        </div>
+
         {/* Zone Recommendation */}
         {sqtStress > 0 && (() => {
           const sqtRatioCalc = sqtPattern === "continuous" ? 1.0 : sqtOn / (sqtOn + sqtGap);
@@ -1001,58 +1054,6 @@ const CraneLongTravelSim = () => {
           );
         })()}
 
-        {/* Top View — bottom of right panel */}
-        <div style={{ ...styles.card, backgroundColor: "#f5f5f5" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6, width: "100%" }}>
-            <span style={{ fontWeight: "bold", color: "#546e7a" }}>Top View — Skew (clamped ±12°)</span>
-            <span style={{ ...styles.phaseBadge, backgroundColor: phaseBadgeColor.bg, color: phaseBadgeColor.color }}>
-              {dir === "forward" ? "▶" : "◀"} {dir.charAt(0).toUpperCase() + dir.slice(1)} · {phaseLabel}
-            </span>
-          </div>
-          <svg width="100%" height="140" viewBox="0 0 400 160" style={{display:"block"}}>
-            <line x1="20" y1="10" x2="20" y2="150" stroke="#b0bec5" strokeWidth="6" />
-            <line x1="380" y1="10" x2="380" y2="150" stroke="#b0bec5" strokeWidth="6" />
-            <text x="20" y="8" textAnchor="middle" fill="#78909c" fontSize="10">L</text>
-            <text x="380" y="8" textAnchor="middle" fill="#78909c" fontSize="10">R</text>
-            <defs>
-              <marker id="arrow-dir" markerWidth="8" markerHeight="6" refX="4" refY="3" orient="auto">
-                <polygon points="0 0, 8 3, 0 6" fill="#0288d1" />
-              </marker>
-              <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
-                <polygon points="0 0, 8 3, 0 6" fill="#c62828" />
-              </marker>
-            </defs>
-            {dir === "forward"
-              ? <line x1="200" y1="145" x2="200" y2="118" stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)" />
-              : <line x1="200" y1="15"  x2="200" y2="42"  stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)" />
-            }
-            <g transform={`rotate(${skewAngle}, 200, 80)`}>
-              <rect x="20" y="60" width="360" height="40" fill="#fbc02d" stroke="#f57f17" strokeWidth="2" rx="4" />
-              <circle cx={20 + (trolleyPos / span) * 360} cy="80" r="12" fill="#d32f2f" />
-              {isActive && Math.abs(skewAngle) > 0.1 && (
-                <>
-                  <circle cx={biteLeft ? 20 : 380} cy={fwdY < 60 ? 65 : 95} r="8"
-                    fill="transparent" stroke="#c62828" strokeWidth="4" />
-                  <text x={biteX} y={fwdY} fill="#c62828" fontSize="11" fontWeight="bold">BITE</text>
-                  <text x={dragX} y={rearY} fill="#546e7a" fontSize="11" fontWeight="bold">DRAG</text>
-                </>
-              )}
-            </g>
-            {isActive && lateralForce > 0 && (
-              <><line x1="380" y1="80" x2="410" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)" />
-              <text x="385" y="73" fill="#c62828" fontSize="11">{Math.abs(lateralForce).toFixed(2)}T →R</text></>
-            )}
-            {isActive && lateralForce < 0 && (
-              <><line x1="20" y1="80" x2="-10" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)" />
-              <text x="5" y="73" fill="#c62828" fontSize="11">L← {Math.abs(lateralForce).toFixed(2)}T</text></>
-            )}
-          </svg>
-          {isActive && affectedRail !== "none" && (
-            <div style={{ fontSize: 12, color: "#c62828", marginTop: 4, fontWeight: "bold" }}>
-              Side thrust pressing on {affectedRail.toUpperCase()} rail flange
-            </div>
-          )}
-        </div>
 
       </div>{/* end rightPanel */}
       </div>{/* end mainGrid */}
