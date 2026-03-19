@@ -930,6 +930,77 @@ const CraneLongTravelSim = () => {
           })()}
         </div>
         </div>{/* end vizRow */}
+
+        {/* Zone Recommendation */}
+        {sqtStress > 0 && (() => {
+          const sqtRatioCalc = sqtPattern === "continuous" ? 1.0 : sqtOn / (sqtOn + sqtGap);
+          const a_throat = 0.707 * sqtWeldSize;
+          const A_current = 2 * RAIL_HEIGHT_MM * a_throat * sqtRatioCalc;
+          const F_res_N = sqtStress * A_current;
+          const A_cont = 2 * RAIL_HEIGHT_MM * a_throat; // continuous same weld size
+          const tauCont = F_res_N / A_cont;
+          const C_D = 2e6 * Math.pow(55, 3);
+          const C_E = 2e6 * Math.pow(18, 3);
+          const yearsCurrent = (sqtPattern === "continuous" ? C_D : C_E) / Math.pow(sqtStress, 3) / cyclesPerYear;
+          const yearsCritUpgrade = C_D / Math.pow(tauCont, 3) / cyclesPerYear;
+          const tau25 = Math.pow(C_D / (25 * cyclesPerYear), 1/3);
+          const reqSize = Math.ceil(F_res_N / (2 * RAIL_HEIGHT_MM * 0.707 * tau25));
+          const A_req = 2 * RAIL_HEIGHT_MM * 0.707 * reqSize;
+          const tauReq = F_res_N / A_req;
+          const yearsReq = C_D / Math.pow(tauReq, 3) / cyclesPerYear;
+          const fmt = y => y >= 999 ? ">999" : y.toFixed(1);
+          const yCol = y => y >= 25 ? "#2e7d32" : y >= 10 ? "#e65100" : "#c62828";
+          const yBg  = y => y >= 25 ? "#e8f5e9" : y >= 10 ? "#fff3e0" : "#ffebee";
+          const th = { padding: "5px 8px", textAlign: "center", color: "#546e7a", fontWeight: "700", fontSize: 11, borderBottom: "2px solid #eceff1" };
+          const td = { padding: "6px 8px", textAlign: "center", fontSize: 12, borderBottom: "1px solid #f5f5f5" };
+          const scenarios = [
+            { label: "⚪ ปัจจุบัน", desc: sqtPattern === "continuous" ? "Continuous ทั้งเส้น" : `Intermittent ${sqtOn}↔${sqtGap}mm`,
+              tau: sqtStress, cat: sqtPattern === "continuous" ? "D · 55" : "E · 18", years: yearsCurrent },
+            { label: "🟡 Critical Zone", desc: `Continuous ${sqtWeldSize}mm (±3m จากจุดจอด)`,
+              tau: tauCont, cat: "D · 55", years: yearsCritUpgrade },
+            { label: "🟢 Recommended", desc: `Continuous ${reqSize}mm · E7016`,
+              tau: tauReq, cat: "D · 55", years: yearsReq },
+          ];
+          return (
+            <div style={{ backgroundColor: "white", borderRadius: 14, padding: "12px 16px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)", flexShrink: 0 }}>
+              <div style={{ fontWeight: "bold", color: "#37474f", fontSize: 13, marginBottom: 8 }}>
+                🗺 Weld Zone Recommendation — ตำแหน่งบนรางยาว 140 m · {cyclesPerYear.toLocaleString()} cycles/yr
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f5f5f5" }}>
+                    {["Zone", "Pattern", "Cat. (MPa)", "τ (MPa)", "Fatigue util", "อายุ (ปี)"].map(h => <th key={h} style={th}>{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {scenarios.map((s, i) => {
+                    const fatLim = s.cat.includes("55") ? 55 : 18;
+                    const util = (s.tau / fatLim * 100).toFixed(0);
+                    return (
+                      <tr key={i} style={{ backgroundColor: yBg(s.years) }}>
+                        <td style={{ ...td, textAlign: "left" }}>
+                          <strong>{s.label}</strong>
+                          <div style={{ fontSize: 10, color: "#78909c" }}>{s.desc}</div>
+                        </td>
+                        <td style={td}>{s.desc.split("·")[0].trim()}</td>
+                        <td style={td}>{s.cat} MPa</td>
+                        <td style={{ ...td, fontWeight: "bold" }}>{s.tau.toFixed(1)}</td>
+                        <td style={{ ...td, fontWeight: "bold", color: yCol(s.years) }}>{util}%</td>
+                        <td style={{ ...td, fontSize: 18, fontWeight: "900", color: yCol(s.years) }}>{fmt(s.years)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {yearsCritUpgrade < 25 && (
+                <div style={{ marginTop: 8, padding: "6px 12px", backgroundColor: "#fff8e1", borderRadius: 8, fontSize: 12, color: "#f57f17" }}>
+                  💡 ต้องใช้ <strong>Continuous {reqSize}mm E7016</strong> ที่ Critical Zone ถึงจะได้อายุ ≥ 25 ปี
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Top View — bottom of right panel */}
         <div style={{ ...styles.card, backgroundColor: "#f5f5f5" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6, width: "100%" }}>
