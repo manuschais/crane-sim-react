@@ -207,7 +207,7 @@ const CraneLongTravelSim = () => {
   const trolleyMass = 2.2;
 
   const [load, setLoad] = useState(8);
-  const [trolleyPos, setTrolleyPos] = useState(3.0);
+  const [trolleyPos, setTrolleyPos] = useState(11.8);
   const [hasTieBack, setHasTieBack] = useState(false);
   const [beamKey, setBeamKey] = useState("H600×300");
   const [electrode, setElectrode] = useState("E7016");
