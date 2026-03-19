@@ -536,19 +536,19 @@ export default function CraneSimultaneousSim() {
                 <text x="88" y="14" textAnchor="middle" fill="#0277bd" fontSize="9" fontWeight="bold">← Long Travel →</text>
 
                 {/* ── L rail (top, horizontal) ── */}
-                <rect x="5"  y="18" width="172" height="4"  fill="#ff8f00" rx="1"/>
-                <rect x="5"  y="22" width="172" height="5"  fill="#455a64" rx="1"/>
-                <rect x="5"  y="27" width="172" height="11" fill="#607d8b" rx="1"/>
+                <rect x="5"  y="20" width="172" height="5"  fill="#455a64" rx="1"/>
+                <rect x="5"  y="25" width="172" height="13" fill="#607d8b" rx="1"/>
+                <rect x="5"  y="29" width="172" height="5"  fill="#ff8f00" rx="1"/>  {/* SQT BAR — กลาง WF */}
                 <rect x="5"  y="38" width="172" height="5"  fill="#455a64" rx="1"/>
                 <text x="178" y="33" fill="#546e7a" fontSize="9" fontWeight="bold">L</text>
 
                 {/* ── R rail (bottom, horizontal) ── */}
-                <rect x="5"  y="176" width="172" height="5"  fill="#455a64" rx="1"/>
-                <rect x="5"  y="181" width="172" height="11" fill="#607d8b" rx="1"/>
-                <rect x="5"  y="192" width="172" height="5"  fill="#455a64" rx="1"/>
-                <rect x="5"  y="197" width="172" height="4"  fill="#ff8f00" rx="1"/>
-                <text x="178" y="190" fill="#546e7a" fontSize="9" fontWeight="bold">R</text>
-                <text x="7" y="16" fill="#ff8f00" fontSize="7">SQT BAR weld ▼</text>
+                <rect x="5"  y="174" width="172" height="5"  fill="#455a64" rx="1"/>  {/* top flange */}
+                <rect x="5"  y="179" width="172" height="15" fill="#607d8b" rx="1"/>  {/* web */}
+                <rect x="5"  y="183" width="172" height="5"  fill="#ff8f00" rx="1"/>  {/* SQT BAR — กลาง WF */}
+                <rect x="5"  y="194" width="172" height="5"  fill="#455a64" rx="1"/>  {/* bot flange */}
+                <text x="178" y="188" fill="#546e7a" fontSize="9" fontWeight="bold">R</text>
+                <text x="7" y="18" fill="#ff8f00" fontSize="7">── SQT BAR weld (กลาง WF)</text>
 
                 {/* ── End trucks (horizontal, connecting to rails) ── */}
                 {/* Top ET on L rail */}
