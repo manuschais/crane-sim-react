@@ -737,9 +737,9 @@ const CraneLongTravelSim = () => {
                   <text x="0" y="253" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">{mode === "long" ? "L-COL" : "L-ET"}</text>
                   {/* Bearing plate */}
                   <rect x="-50" y="205" width="100" height="13" fill="#546e7a" rx="2"/>
-                  {/* Fillet welds */}
-                  <polygon points={`-50,205 -32,205 -50,191`} fill={wc} opacity="0.95"/>
-                  <polygon points={`50,205 32,205 50,191`}     fill={wc} opacity="0.95"/>
+                  {/* Fillet welds at base — neutral grey (base weld not being checked) */}
+                  <polygon points={`-50,205 -32,205 -50,191`} fill="#546e7a" opacity="0.95"/>
+                  <polygon points={`50,205 32,205 50,191`}     fill="#546e7a" opacity="0.95"/>
                   {/* STATIC: Bottom flange */}
                   <rect x="-52" y="191" width="104" height="14" fill="#37474f" rx="2"/>
                   <text x="0" y="201" textAnchor="middle" fill="#cfd8dc" fontSize="6">WELDED</text>
@@ -747,6 +747,11 @@ const CraneLongTravelSim = () => {
                   <g transform={`rotate(${tilt}, 0, ${ry})`} style={{ transition: "transform 0.3s ease-out" }}>
                     <rect x="-8" y="70" width="16" height="121" fill="#546e7a"/>
                     <rect x="-52" y="57" width="104" height="13" fill="#37474f" rx="2"/>
+                    {/* SQT BAR weld — colored by utilization (จุดที่ตรวจสอบจริง) */}
+                    <rect x="-52" y="54" width="104" height="5" fill={wc} rx="1"/>
+                    {affectedRail === "left" && sqtUtil > 0 && (
+                      <text x="0" y="52" textAnchor="middle" fill={wc} fontSize="7" fontWeight="bold">{sqtUtil.toFixed(0)}%</text>
+                    )}
                     <rect x="-18" y="33" width="36" height="24" fill="#e65100" rx="2"/>
                     <text x="0" y="48" textAnchor="middle" fill="white" fontSize="7">RAIL</text>
                     <ellipse cx="0" cy="20" rx="22" ry="9" fill="#b0bec5" stroke="#78909c" strokeWidth="2"/>
@@ -755,10 +760,6 @@ const CraneLongTravelSim = () => {
                   {/* Side thrust arrow (when left rail affected) */}
                   {isActive && affectedRail === "left" && (
                     <line x1="-75" y1="26" x2="-52" y2="26" stroke="#c62828" strokeWidth="2.5" markerEnd="url(#arr-thrust)"/>
-                  )}
-                  {/* Weld % label */}
-                  {affectedRail === "left" && sqtUtil > 0 && (
-                    <text x="0" y="200" textAnchor="middle" fill={wc} fontSize="8" fontWeight="bold">{sqtUtil.toFixed(0)}%</text>
                   )}
                   {/* Displacement label */}
                   {isActive && affectedRail === "left" && torsionDisp > 0.05 && (
@@ -783,13 +784,18 @@ const CraneLongTravelSim = () => {
                   <rect x="-32" y="218" width="64" height="58" fill="#90a4ae" rx="3"/>
                   <text x="0" y="253" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">{mode === "long" ? "R-COL" : "R-ET"}</text>
                   <rect x="-50" y="205" width="100" height="13" fill="#546e7a" rx="2"/>
-                  <polygon points={`-50,205 -32,205 -50,191`} fill={wc} opacity="0.95"/>
-                  <polygon points={`50,205 32,205 50,191`}     fill={wc} opacity="0.95"/>
+                  <polygon points={`-50,205 -32,205 -50,191`} fill="#546e7a" opacity="0.95"/>
+                  <polygon points={`50,205 32,205 50,191`}     fill="#546e7a" opacity="0.95"/>
                   <rect x="-52" y="191" width="104" height="14" fill="#37474f" rx="2"/>
                   <text x="0" y="201" textAnchor="middle" fill="#cfd8dc" fontSize="6">WELDED</text>
                   <g transform={`rotate(${tilt}, 0, ${ry})`} style={{ transition: "transform 0.3s ease-out" }}>
                     <rect x="-8" y="70" width="16" height="121" fill="#546e7a"/>
                     <rect x="-52" y="57" width="104" height="13" fill="#37474f" rx="2"/>
+                    {/* SQT BAR weld — colored by utilization */}
+                    <rect x="-52" y="54" width="104" height="5" fill={wc} rx="1"/>
+                    {affectedRail === "right" && sqtUtil > 0 && (
+                      <text x="0" y="52" textAnchor="middle" fill={wc} fontSize="7" fontWeight="bold">{sqtUtil.toFixed(0)}%</text>
+                    )}
                     <rect x="-18" y="33" width="36" height="24" fill="#e65100" rx="2"/>
                     <text x="0" y="48" textAnchor="middle" fill="white" fontSize="7">RAIL</text>
                     <ellipse cx="0" cy="20" rx="22" ry="9" fill="#b0bec5" stroke="#78909c" strokeWidth="2"/>
@@ -797,9 +803,6 @@ const CraneLongTravelSim = () => {
                   </g>
                   {isActive && affectedRail === "right" && (
                     <line x1="75" y1="26" x2="52" y2="26" stroke="#c62828" strokeWidth="2.5" markerEnd="url(#arr-thrust)"/>
-                  )}
-                  {affectedRail === "right" && sqtUtil > 0 && (
-                    <text x="0" y="200" textAnchor="middle" fill={wc} fontSize="8" fontWeight="bold">{sqtUtil.toFixed(0)}%</text>
                   )}
                   {isActive && affectedRail === "right" && torsionDisp > 0.05 && (
                     <text x={tilt > 0 ? 30 : -30} y="15" fill="#e91e63" fontSize="9" fontWeight="bold">{torsionDisp.toFixed(2)}mm</text>
