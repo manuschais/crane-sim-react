@@ -170,9 +170,9 @@ function calcKbeam(Iy_cm4) {
   return K_N_mm / 9810; // ton/mm
 }
 
-// Speed-based acceleration (Speed 1=15 m/min, Speed 2=30 m/min)
-const SPEED_1_MS = 15 / 60;   // 0.25 m/s
-const SPEED_2_MS = 30 / 60;   // 0.50 m/s
+// Speed-based acceleration (Speed 1=4 m/min, Speed 2=50 m/min) — real crane spec
+const SPEED_1_MS = 4  / 60;   // 0.067 m/s
+const SPEED_2_MS = 50 / 60;   // 0.833 m/s
 const T_SOFT   = 5;            // ramp time soft start (s)
 const T_HARD   = 3;            // ramp time hard start (s)
 const T_BRAKE  = 2;            // braking time (s)
@@ -195,7 +195,7 @@ const BEAM_SECTIONS_CROSS = {
   },
 };
 const BEAM_SPAN_CROSS_MM = 23600;       // crane span used as bridge girder span
-const SPEED_1_CROSS_MS   = 10 / 60;    // 10 m/min cross travel Speed 1
+const SPEED_1_CROSS_MS   = 5  / 60;    // 5 m/min cross travel Speed 1
 const SPEED_2_CROSS_MS   = 20 / 60;    // 20 m/min cross travel Speed 2
 const ACCEL_SOFT_CROSS   = SPEED_1_CROSS_MS / T_SOFT  / G_MS2;
 const ACCEL_HARD_CROSS   = SPEED_2_CROSS_MS / T_HARD  / G_MS2;
@@ -682,7 +682,7 @@ const CraneLongTravelSim = () => {
               onPointerCancel={stopMove}
               style={{ ...styles.btn, backgroundColor: accelMode === 1 ? "#0277bd" : "#29b6f6" }}
             >
-              {mode === "long" ? "Speed 1 (15 m/min)" : "Speed 1 (10 m/min)"}
+              {mode === "long" ? "Speed 1 (4 m/min)" : "Speed 1 (5 m/min)"}
             </button>
             <button
               type="button"
@@ -691,7 +691,7 @@ const CraneLongTravelSim = () => {
               onPointerCancel={stopMove}
               style={{ ...styles.btn, backgroundColor: accelMode === 2 ? "#b71c1c" : "#ef5350" }}
             >
-              {mode === "long" ? "Speed 2 (30 m/min)" : "Speed 2 (20 m/min)"}
+              {mode === "long" ? "Speed 2 (50 m/min)" : "Speed 2 (20 m/min)"}
             </button>
           </div>
         </div>
