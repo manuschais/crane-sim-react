@@ -939,42 +939,103 @@ const CraneLongTravelSim = () => {
               {dir === "forward" ? "▶" : "◀"} {dir.charAt(0).toUpperCase() + dir.slice(1)} · {phaseLabel}
             </span>
           </div>
-          <svg width="100%" height="140" viewBox="0 0 400 160" style={{display:"block"}}>
-            <line x1="20" y1="10" x2="20" y2="150" stroke="#b0bec5" strokeWidth="6" />
-            <line x1="380" y1="10" x2="380" y2="150" stroke="#b0bec5" strokeWidth="6" />
-            <text x="20" y="8" textAnchor="middle" fill="#78909c" fontSize="10">L</text>
-            <text x="380" y="8" textAnchor="middle" fill="#78909c" fontSize="10">R</text>
+          <svg width="100%" height="155" viewBox="-18 0 440 165" style={{display:"block"}}>
             <defs>
               <marker id="arrow-dir" markerWidth="8" markerHeight="6" refX="4" refY="3" orient="auto">
-                <polygon points="0 0, 8 3, 0 6" fill="#0288d1" />
+                <polygon points="0 0,8 3,0 6" fill="#0288d1"/>
               </marker>
               <marker id="arrow-red" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
-                <polygon points="0 0, 8 3, 0 6" fill="#c62828" />
+                <polygon points="0 0,8 3,0 6" fill="#c62828"/>
               </marker>
             </defs>
+
+            {/* Background */}
+            <rect x="-18" y="0" width="440" height="165" fill="#eceff1" rx="6"/>
+
+            {/* ── L rail (vertical, left side) ── */}
+            <rect x="3"  y="0" width="24" height="165" fill="#607d8b"/>
+            <rect x="3"  y="0" width="6"  height="165" fill="#455a64"/>
+            <rect x="21" y="0" width="6"  height="165" fill="#455a64"/>
+            <rect x="10" y="0" width="9"  height="165" fill="#ff8f00"/>
+            <text x="15" y="11" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">L</text>
+
+            {/* ── R rail (vertical, right side) ── */}
+            <rect x="373" y="0" width="24" height="165" fill="#607d8b"/>
+            <rect x="373" y="0" width="6"  height="165" fill="#455a64"/>
+            <rect x="391" y="0" width="6"  height="165" fill="#455a64"/>
+            <rect x="381" y="0" width="9"  height="165" fill="#ff8f00"/>
+            <text x="385" y="11" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">R</text>
+
+            {/* SQT BAR label */}
+            <rect x="-16" y="76" width="6" height="12" fill="#ff8f00" rx="1"/>
+            <text x="-8" y="85" fill="#ff8f00" fontSize="7" fontWeight="bold">SQT BAR</text>
+
+            {/* Travel direction arrow (fixed) */}
             {dir === "forward"
-              ? <line x1="200" y1="145" x2="200" y2="118" stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)" />
-              : <line x1="200" y1="15"  x2="200" y2="42"  stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)" />
+              ? <><line x1="200" y1="158" x2="200" y2="130" stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)"/>
+                  <text x="207" y="155" fill="#0288d1" fontSize="9" fontWeight="bold">FWD</text></>
+              : <><line x1="200" y1="7"   x2="200" y2="35"  stroke="#0288d1" strokeWidth="2" markerEnd="url(#arrow-dir)"/>
+                  <text x="207" y="22"  fill="#0288d1" fontSize="9" fontWeight="bold">REV</text></>
             }
-            <g transform={`rotate(${skewAngle}, 200, 80)`}>
-              <rect x="20" y="60" width="360" height="40" fill="#fbc02d" stroke="#f57f17" strokeWidth="2" rx="4" />
-              <circle cx={20 + (trolleyPos / span) * 360} cy="80" r="12" fill="#d32f2f" />
+
+            {/* ── Rotating group ── */}
+            <g transform={`rotate(${skewAngle}, 200, 80)`} style={{ transition: "transform 0.3s ease-out" }}>
+
+              {/* Left End Truck */}
+              <rect x="26" y="53" width="30" height="54" fill="#37474f" rx="2"/>
+              <text x="41" y="83" textAnchor="middle" fill="#90a4ae" fontSize="7" fontWeight="bold">ET</text>
+
+              {/* Right End Truck */}
+              <rect x="344" y="53" width="30" height="54" fill="#37474f" rx="2"/>
+              <text x="359" y="83" textAnchor="middle" fill="#90a4ae" fontSize="7" fontWeight="bold">ET</text>
+
+              {/* Wheels (4 corners) */}
+              <circle cx="18" cy="64"  r="7" fill="#1a237e" stroke="#c5cae9" strokeWidth="1.5"/>
+              <circle cx="18" cy="96"  r="7" fill="#1a237e" stroke="#c5cae9" strokeWidth="1.5"/>
+              <circle cx="382" cy="64" r="7" fill="#1a237e" stroke="#c5cae9" strokeWidth="1.5"/>
+              <circle cx="382" cy="96" r="7" fill="#1a237e" stroke="#c5cae9" strokeWidth="1.5"/>
+
+              {/* Bridge girder */}
+              <rect x="56" y="64" width="288" height="32" fill="#fbc02d" stroke="#f57f17" strokeWidth="1.5" rx="2"/>
+              <line x1="128" y1="64" x2="128" y2="96" stroke="#f9a825" strokeWidth="0.8"/>
+              <line x1="200" y1="64" x2="200" y2="96" stroke="#f9a825" strokeWidth="0.8"/>
+              <line x1="272" y1="64" x2="272" y2="96" stroke="#f9a825" strokeWidth="0.8"/>
+              <text x="200" y="84" textAnchor="middle" fill="#37474f" fontSize="10" fontWeight="bold">CRANE BRIDGE</text>
+
+              {/* Hoist / Trolley */}
+              {(() => {
+                const tx = 56 + (trolleyPos / span) * 288;
+                return (
+                  <g>
+                    <rect x={tx - 20} y="69" width="40" height="22" fill="#d32f2f" stroke="#b71c1c" strokeWidth="1.5" rx="3"/>
+                    <text x={tx} y="84" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">HOIST</text>
+                  </g>
+                );
+              })()}
+
+              {/* BITE / DRAG */}
               {isActive && Math.abs(skewAngle) > 0.1 && (
                 <>
-                  <circle cx={biteLeft ? 20 : 380} cy={fwdY < 60 ? 65 : 95} r="8"
-                    fill="transparent" stroke="#c62828" strokeWidth="4" />
-                  <text x={biteX} y={fwdY} fill="#c62828" fontSize="11" fontWeight="bold">BITE</text>
-                  <text x={dragX} y={rearY} fill="#546e7a" fontSize="11" fontWeight="bold">DRAG</text>
+                  <circle cx={biteLeft ? 18 : 382} cy={fwdY < 60 ? 64 : 96} r="9"
+                    fill="transparent" stroke="#c62828" strokeWidth="3"/>
+                  <text x={biteX} y={fwdY} fill="#c62828" fontSize="10" fontWeight="bold">BITE</text>
+                  <text x={dragX} y={rearY} fill="#78909c" fontSize="10" fontWeight="bold">DRAG</text>
                 </>
               )}
             </g>
+
+            {/* Force arrows */}
             {isActive && lateralForce > 0 && (
-              <><line x1="380" y1="80" x2="410" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)" />
-              <text x="385" y="73" fill="#c62828" fontSize="11">{Math.abs(lateralForce).toFixed(2)}T →R</text></>
+              <>
+                <line x1="397" y1="80" x2="417" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)"/>
+                <text x="399" y="74" fill="#c62828" fontSize="10" fontWeight="bold">{Math.abs(lateralForce).toFixed(2)}T→R</text>
+              </>
             )}
             {isActive && lateralForce < 0 && (
-              <><line x1="20" y1="80" x2="-10" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)" />
-              <text x="5" y="73" fill="#c62828" fontSize="11">L← {Math.abs(lateralForce).toFixed(2)}T</text></>
+              <>
+                <line x1="3" y1="80" x2="-16" y2="80" stroke="#c62828" strokeWidth="3" markerEnd="url(#arrow-red)"/>
+                <text x="-17" y="74" fill="#c62828" fontSize="10" fontWeight="bold" textAnchor="end">L←{Math.abs(lateralForce).toFixed(2)}T</text>
+              </>
             )}
           </svg>
           {isActive && affectedRail !== "none" && (
