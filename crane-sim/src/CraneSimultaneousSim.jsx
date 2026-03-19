@@ -511,7 +511,7 @@ export default function CraneSimultaneousSim() {
               ? `⚠ Both axes active — F_combined = √(${fLT.toFixed(2)}² + ${fCT.toFixed(2)}²) = ${fComb.toFixed(2)} ton`
               : ltActive ? `▶▶ Long Travel active — F_LT = ${fLT.toFixed(3)} ton`
               : ctActive ? `↔ Cross Travel active — F_CT = ${fCT.toFixed(3)} ton`
-              : "✓ Idle — Hold a speed button to simulate motion"}
+              : "✓ Idle — กดปุ่ม Speed 1 / Speed 2 เพื่อเริ่ม simulation"}
           </div>
 
           {/* Force vector diagram + Comparison */}
@@ -522,81 +522,105 @@ export default function CraneSimultaneousSim() {
               <div style={{ fontWeight: "bold", color: "#37474f", fontSize: 12, marginBottom: 6 }}>
                 Force Vector — Top View (Runway Rail)
               </div>
-              <svg width="280" height="220" viewBox="0 0 280 220" style={{ display: "block" }}>
-                {/* Crane outline */}
-                <rect x="40" y="80" width="200" height="60" fill="#fbc02d" stroke="#f57f17" strokeWidth="2" rx="4" opacity="0.7" />
-                <text x="140" y="115" textAnchor="middle" fill="#37474f" fontSize="11" fontWeight="bold">CRANE BRIDGE</text>
+              <svg width="300" height="220" viewBox="0 0 300 220" style={{ display: "block" }}>
+                <defs>
+                  <marker id="arr-lt" markerWidth="7" markerHeight="5" refX="0" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#0277bd"/></marker>
+                  <marker id="arr-ct" markerWidth="7" markerHeight="5" refX="0" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#6a1b9a"/></marker>
+                  <marker id="arr-cb" markerWidth="7" markerHeight="5" refX="0" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#e65100"/></marker>
+                </defs>
 
-                {/* Runway rails */}
-                <line x1="10" y1="80"  x2="270" y2="80"  stroke="#b0bec5" strokeWidth="5" strokeLinecap="round" />
-                <line x1="10" y1="140" x2="270" y2="140" stroke="#b0bec5" strokeWidth="5" strokeLinecap="round" />
-                <text x="5" y="78"  fill="#90a4ae" fontSize="9">L</text>
-                <text x="5" y="138" fill="#90a4ae" fontSize="9">R</text>
+                {/* Background */}
+                <rect width="300" height="220" fill="#f8f9fa" rx="8"/>
 
-                {/* F_LT arrow (horizontal right) */}
+                {/* ── Runway rails (horizontal) ── */}
+                {/* Top rail (L) */}
+                <rect x="6"  y="44" width="288" height="4"  fill="#ff8f00" rx="1" opacity="0.9"/>
+                <rect x="6"  y="48" width="288" height="5"  fill="#455a64" rx="1"/>
+                <rect x="6"  y="53" width="288" height="12" fill="#607d8b" rx="1"/>
+                <rect x="6"  y="65" width="288" height="5"  fill="#455a64" rx="1"/>
+                {/* Bottom rail (R) */}
+                <rect x="6"  y="150" width="288" height="5"  fill="#455a64" rx="1"/>
+                <rect x="6"  y="155" width="288" height="12" fill="#607d8b" rx="1"/>
+                <rect x="6"  y="167" width="288" height="5"  fill="#455a64" rx="1"/>
+                <rect x="6"  y="172" width="288" height="4"  fill="#ff8f00" rx="1" opacity="0.9"/>
+
+                {/* Rail labels */}
+                <text x="293" y="59"  fill="#546e7a" fontSize="9" fontWeight="bold">L</text>
+                <text x="293" y="163" fill="#546e7a" fontSize="9" fontWeight="bold">R</text>
+                <text x="8" y="42" fill="#ff8f00" fontSize="8" fontWeight="bold">◀ SQT BAR weld</text>
+
+                {/* ── End trucks ── */}
+                <rect x="30" y="63" width="24" height="74" fill="#263238" rx="3"/>
+                <rect x="246" y="63" width="24" height="74" fill="#263238" rx="3"/>
+                {/* ET labels */}
+                <text x="42" y="101" textAnchor="middle" fill="#90a4ae" fontSize="7" fontWeight="bold">ET</text>
+                <text x="258" y="101" textAnchor="middle" fill="#90a4ae" fontSize="7" fontWeight="bold">ET</text>
+
+                {/* Wheels (4 corners) */}
+                <circle cx="38"  cy="68"  r="6" fill="#1a237e" stroke="#e8eaf6" strokeWidth="1"/>
+                <circle cx="38"  cy="132" r="6" fill="#1a237e" stroke="#e8eaf6" strokeWidth="1"/>
+                <circle cx="262" cy="68"  r="6" fill="#1a237e" stroke="#e8eaf6" strokeWidth="1"/>
+                <circle cx="262" cy="132" r="6" fill="#1a237e" stroke="#e8eaf6" strokeWidth="1"/>
+
+                {/* ── Crane Bridge girder ── */}
+                <rect x="52" y="74" width="196" height="52" fill="#fbc02d" stroke="#f57f17" strokeWidth="1.5" rx="3"/>
+                {/* Bridge stiffener lines */}
+                <line x1="100" y1="74" x2="100" y2="126" stroke="#f9a825" strokeWidth="0.8" opacity="0.6"/>
+                <line x1="150" y1="74" x2="150" y2="126" stroke="#f9a825" strokeWidth="0.8" opacity="0.6"/>
+                <line x1="200" y1="74" x2="200" y2="126" stroke="#f9a825" strokeWidth="0.8" opacity="0.6"/>
+                <text x="150" y="104" textAnchor="middle" fill="#37474f" fontSize="10" fontWeight="bold">CRANE BRIDGE</text>
+
+                {/* ── Trolley ── */}
+                {(() => {
+                  const tx = 52 + (trolleyPos / 22.6) * 196;
+                  return (
+                    <g>
+                      <circle cx={tx} cy="100" r="11" fill="#d32f2f" stroke="#b71c1c" strokeWidth="1.5"/>
+                      <circle cx={tx} cy="100" r="5"  fill="#ef9a9a" opacity="0.5"/>
+                      <text x={tx} y="103" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">T</text>
+                    </g>
+                  );
+                })()}
+
+                {/* ── Force arrows (origin = bridge center) ── */}
                 {fLT > 0.01 && (
                   <g>
-                    <defs>
-                      <marker id="arr-lt" markerWidth="7" markerHeight="5" refX="0" refY="2.5" orient="auto">
-                        <polygon points="0 0,7 2.5,0 5" fill="#0277bd" />
-                      </marker>
-                    </defs>
-                    <line
-                      x1="140" y1="110"
-                      x2={140 + arrowLT} y2="110"
-                      stroke="#0277bd" strokeWidth="3" markerEnd="url(#arr-lt)" />
-                    <text x={145 + arrowLT} y="107" fill="#0277bd" fontSize="10" fontWeight="bold">
-                      F_LT {fLT.toFixed(2)}T
+                    <line x1="150" y1="100" x2={150 + arrowLT} y2="100"
+                      stroke="#0277bd" strokeWidth="3.5" markerEnd="url(#arr-lt)"/>
+                    <text x={153 + arrowLT} y="97" fill="#0277bd" fontSize="10" fontWeight="bold">
+                      {fLT.toFixed(2)}T
                     </text>
                   </g>
                 )}
-
-                {/* F_CT arrow (vertical down) */}
                 {fCT > 0.01 && (
                   <g>
-                    <defs>
-                      <marker id="arr-ct" markerWidth="7" markerHeight="5" refX="0" refY="2.5" orient="auto">
-                        <polygon points="0 0,7 2.5,0 5" fill="#6a1b9a" />
-                      </marker>
-                    </defs>
-                    <line
-                      x1="140" y1="110"
-                      x2="140" y2={110 + arrowCT}
-                      stroke="#6a1b9a" strokeWidth="3" markerEnd="url(#arr-ct)" />
-                    <text x={145} y={115 + arrowCT} fill="#6a1b9a" fontSize="10" fontWeight="bold">
-                      F_CT {fCT.toFixed(2)}T
+                    <line x1="150" y1="100" x2="150" y2={100 + arrowCT}
+                      stroke="#6a1b9a" strokeWidth="3.5" markerEnd="url(#arr-ct)"/>
+                    <text x="154" y={100 + arrowCT + 12} fill="#6a1b9a" fontSize="10" fontWeight="bold">
+                      {fCT.toFixed(2)}T
                     </text>
                   </g>
                 )}
-
-                {/* F_combined arrow (diagonal) */}
                 {fComb > 0.01 && bothActive && (
                   <g>
-                    <defs>
-                      <marker id="arr-cb" markerWidth="7" markerHeight="5" refX="0" refY="2.5" orient="auto">
-                        <polygon points="0 0,7 2.5,0 5" fill="#e65100" />
-                      </marker>
-                    </defs>
-                    <line
-                      x1="140" y1="110"
-                      x2={140 + fLT / fComb * arrowComb}
-                      y2={110 + fCT / fComb * arrowComb}
-                      stroke="#e65100" strokeWidth="3.5" strokeDasharray="6,2" markerEnd="url(#arr-cb)" />
-                    <text x={142 + fLT / fComb * arrowComb} y={108 + fCT / fComb * arrowComb + 16}
-                      fill="#e65100" fontSize="11" fontWeight="bold">
-                      F_comb {fComb.toFixed(2)}T
+                    <line x1="150" y1="100"
+                      x2={150 + fLT / fComb * arrowComb}
+                      y2={100 + fCT / fComb * arrowComb}
+                      stroke="#e65100" strokeWidth="3" strokeDasharray="5,2" markerEnd="url(#arr-cb)"/>
+                    <text x={152 + fLT / fComb * arrowComb}
+                          y={98  + fCT / fComb * arrowComb + 14}
+                      fill="#e65100" fontSize="10" fontWeight="bold">
+                      {fComb.toFixed(2)}T
                     </text>
                   </g>
                 )}
 
-                {/* Legend */}
-                <g transform="translate(8, 185)">
-                  <rect width="8" height="8" fill="#0277bd" rx="1" />
-                  <text x="11" y="8" fill="#546e7a" fontSize="9">Long Travel</text>
-                  <rect x="80" width="8" height="8" fill="#6a1b9a" rx="1" />
-                  <text x="91" y="8" fill="#546e7a" fontSize="9">Cross Travel</text>
-                  <rect x="170" width="8" height="8" fill="#e65100" rx="1" />
-                  <text x="181" y="8" fill="#546e7a" fontSize="9">Combined</text>
+                {/* ── Legend ── */}
+                <g transform="translate(6, 196)">
+                  <rect width="8" height="8" fill="#0277bd" rx="1"/><text x="11" y="8" fill="#546e7a" fontSize="9">Long Travel</text>
+                  <rect x="78" width="8" height="8" fill="#6a1b9a" rx="1"/><text x="89" y="8" fill="#546e7a" fontSize="9">Cross Travel</text>
+                  <rect x="166" width="8" height="8" fill="#e65100" rx="1"/><text x="177" y="8" fill="#546e7a" fontSize="9">Combined</text>
+                  <rect x="222" width="8" height="8" fill="#ff8f00" rx="1"/><text x="233" y="8" fill="#546e7a" fontSize="9">SQT BAR</text>
                 </g>
               </svg>
             </div>
@@ -684,6 +708,72 @@ export default function CraneSimultaneousSim() {
               </div>
             </div>
           </div>
+
+        {/* Zone Recommendation */}
+        {wComb.tau > 0 && (() => {
+          const refTau = Math.max(wComb.tau, wLT.tau);
+          const ratio  = weldPattern === "continuous" ? 1.0 : weldOn / (weldOn + weldGap);
+          const A_cur  = 2 * RAIL_H * 0.707 * weldSize * ratio;
+          const F_res_N = refTau * A_cur;
+          const tauCont = F_res_N / (2 * RAIL_H * 0.707 * weldSize);
+          const C_D = 2e6 * 55 ** 3;
+          const C_E = 2e6 * 18 ** 3;
+          const yrCur  = (weldPattern === "continuous" ? C_D : C_E) / refTau ** 3 / cyclesPerYear;
+          const yrCrit = C_D / tauCont ** 3 / cyclesPerYear;
+          const tau25  = (C_D / (25 * cyclesPerYear)) ** (1 / 3);
+          const reqSize = Math.ceil(F_res_N / (2 * RAIL_H * 0.707 * tau25));
+          const A_req  = 2 * RAIL_H * 0.707 * reqSize;
+          const tauReq = F_res_N / A_req;
+          const yrReq  = C_D / tauReq ** 3 / cyclesPerYear;
+          const fmt = y => y >= 999 ? ">999" : y.toFixed(1);
+          const yCol = y => y >= 25 ? "#2e7d32" : y >= 10 ? "#e65100" : "#c62828";
+          const yBg  = y => y >= 25 ? "#e8f5e9" : y >= 10 ? "#fff3e0" : "#ffebee";
+          const th = { padding: "5px 8px", textAlign: "center", color: "#546e7a", fontWeight: "700", fontSize: 11, borderBottom: "2px solid #eceff1" };
+          const td = { padding: "6px 8px", textAlign: "center", fontSize: 12, borderBottom: "1px solid #f5f5f5" };
+          const rows = [
+            { label: "⚪ ปัจจุบัน",    desc: weldPattern === "continuous" ? "Continuous ทั้งเส้น" : `Intermittent ${weldOn}↔${weldGap}mm`, tau: refTau,  cat: weldPattern === "continuous" ? "D·55" : "E·18", years: yrCur  },
+            { label: "🟡 Critical Zone", desc: `Continuous ${weldSize}mm (±3m จากจุดจอด)`,                                                     tau: tauCont, cat: "D·55",                                    years: yrCrit },
+            { label: "🟢 Recommended",  desc: `Continuous ${reqSize}mm · E7016`,                                                                tau: tauReq,  cat: "D·55",                                    years: yrReq  },
+          ];
+          return (
+            <div style={{ ...S.card, flexShrink: 0 }}>
+              <div style={{ fontWeight: "bold", color: "#37474f", fontSize: 13, marginBottom: 8 }}>
+                🗺 Weld Zone Recommendation — ใช้แรง Combined (worst case) · {cyclesPerYear.toLocaleString()} cycles/yr
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f5f5f5" }}>
+                    {["Zone", "Pattern", "Cat.", "τ (MPa)", "Fatigue%", "อายุ (ปี)"].map(h => <th key={h} style={th}>{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r, i) => {
+                    const lim  = r.cat.includes("55") ? 55 : 18;
+                    const util = (r.tau / lim * 100).toFixed(0);
+                    return (
+                      <tr key={i} style={{ backgroundColor: yBg(r.years) }}>
+                        <td style={{ ...td, textAlign: "left" }}>
+                          <strong>{r.label}</strong>
+                          <div style={{ fontSize: 10, color: "#78909c" }}>{r.desc}</div>
+                        </td>
+                        <td style={td}>{r.desc.split("(")[0].trim()}</td>
+                        <td style={td}>{r.cat} MPa</td>
+                        <td style={{ ...td, fontWeight: "bold" }}>{r.tau.toFixed(1)}</td>
+                        <td style={{ ...td, fontWeight: "bold", color: yCol(r.years) }}>{util}%</td>
+                        <td style={{ ...td, fontSize: 18, fontWeight: "900", color: yCol(r.years) }}>{fmt(r.years)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {yrCrit < 25 && (
+                <div style={{ marginTop: 8, padding: "6px 12px", backgroundColor: "#fff8e1", borderRadius: 8, fontSize: 12, color: "#f57f17" }}>
+                  💡 ต้องใช้ <strong>Continuous {reqSize}mm E7016</strong> ที่ Critical Zone ถึงจะได้อายุ ≥ 25 ปี
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         </div>
       </div>
