@@ -532,95 +532,117 @@ export default function CraneSimultaneousSim() {
                 {/* Background */}
                 <rect width="300" height="220" fill="#f8f9fa" rx="8"/>
 
-                {/* ── Runway rails (horizontal) ── */}
-                {/* Top rail (L) */}
-                <rect x="6"  y="44" width="288" height="4"  fill="#ff8f00" rx="1" opacity="0.9"/>
-                <rect x="6"  y="48" width="288" height="5"  fill="#455a64" rx="1"/>
-                <rect x="6"  y="53" width="288" height="12" fill="#607d8b" rx="1"/>
-                <rect x="6"  y="65" width="288" height="5"  fill="#455a64" rx="1"/>
-                {/* Bottom rail (R) */}
-                <rect x="6"  y="150" width="288" height="5"  fill="#455a64" rx="1"/>
-                <rect x="6"  y="155" width="288" height="12" fill="#607d8b" rx="1"/>
-                <rect x="6"  y="167" width="288" height="5"  fill="#455a64" rx="1"/>
-                <rect x="6"  y="172" width="288" height="4"  fill="#ff8f00" rx="1" opacity="0.9"/>
+                {/* Long Travel direction label */}
+                <text x="88" y="14" textAnchor="middle" fill="#0277bd" fontSize="9" fontWeight="bold">← Long Travel →</text>
 
-                {/* Rail labels */}
-                <text x="293" y="59"  fill="#546e7a" fontSize="9" fontWeight="bold">L</text>
-                <text x="293" y="163" fill="#546e7a" fontSize="9" fontWeight="bold">R</text>
-                <text x="8" y="42" fill="#ff8f00" fontSize="8" fontWeight="bold">◀ SQT BAR weld</text>
+                {/* ── L rail (top, horizontal) ── */}
+                <rect x="5"  y="18" width="172" height="4"  fill="#ff8f00" rx="1"/>
+                <rect x="5"  y="22" width="172" height="5"  fill="#455a64" rx="1"/>
+                <rect x="5"  y="27" width="172" height="11" fill="#607d8b" rx="1"/>
+                <rect x="5"  y="38" width="172" height="5"  fill="#455a64" rx="1"/>
+                <text x="178" y="33" fill="#546e7a" fontSize="9" fontWeight="bold">L</text>
 
-                {/* ── End trucks ── */}
-                <rect x="30" y="63" width="24" height="74" fill="#263238" rx="3"/>
-                <rect x="246" y="63" width="24" height="74" fill="#263238" rx="3"/>
-                {/* ET labels */}
-                <text x="42" y="101" textAnchor="middle" fill="#90a4ae" fontSize="7" fontWeight="bold">ET</text>
-                <text x="258" y="101" textAnchor="middle" fill="#90a4ae" fontSize="7" fontWeight="bold">ET</text>
+                {/* ── R rail (bottom, horizontal) ── */}
+                <rect x="5"  y="176" width="172" height="5"  fill="#455a64" rx="1"/>
+                <rect x="5"  y="181" width="172" height="11" fill="#607d8b" rx="1"/>
+                <rect x="5"  y="192" width="172" height="5"  fill="#455a64" rx="1"/>
+                <rect x="5"  y="197" width="172" height="4"  fill="#ff8f00" rx="1"/>
+                <text x="178" y="190" fill="#546e7a" fontSize="9" fontWeight="bold">R</text>
+                <text x="7" y="16" fill="#ff8f00" fontSize="7">SQT BAR weld ▼</text>
 
-                {/* Wheels (4 corners) */}
-                <circle cx="38"  cy="68"  r="6" fill="#1a237e" stroke="#e8eaf6" strokeWidth="1"/>
-                <circle cx="38"  cy="132" r="6" fill="#1a237e" stroke="#e8eaf6" strokeWidth="1"/>
-                <circle cx="262" cy="68"  r="6" fill="#1a237e" stroke="#e8eaf6" strokeWidth="1"/>
-                <circle cx="262" cy="132" r="6" fill="#1a237e" stroke="#e8eaf6" strokeWidth="1"/>
+                {/* ── End trucks (horizontal, connecting to rails) ── */}
+                {/* Top ET on L rail */}
+                <rect x="55" y="21" width="76" height="22" fill="#37474f" rx="3"/>
+                <text x="93" y="35" textAnchor="middle" fill="#90a4ae" fontSize="7" fontWeight="bold">END TRUCK</text>
+                {/* Bottom ET on R rail */}
+                <rect x="55" y="177" width="76" height="22" fill="#37474f" rx="3"/>
+                <text x="93" y="191" textAnchor="middle" fill="#90a4ae" fontSize="7" fontWeight="bold">END TRUCK</text>
 
-                {/* ── Crane Bridge girder ── */}
-                <rect x="52" y="74" width="196" height="52" fill="#fbc02d" stroke="#f57f17" strokeWidth="1.5" rx="3"/>
-                {/* Bridge stiffener lines */}
-                <line x1="100" y1="74" x2="100" y2="126" stroke="#f9a825" strokeWidth="0.8" opacity="0.6"/>
-                <line x1="150" y1="74" x2="150" y2="126" stroke="#f9a825" strokeWidth="0.8" opacity="0.6"/>
-                <line x1="200" y1="74" x2="200" y2="126" stroke="#f9a825" strokeWidth="0.8" opacity="0.6"/>
-                <text x="150" y="104" textAnchor="middle" fill="#37474f" fontSize="10" fontWeight="bold">CRANE BRIDGE</text>
+                {/* Wheels on rails */}
+                <circle cx="65"  cy="30"  r="7" fill="#1a237e" stroke="#c5cae9" strokeWidth="1.5"/>
+                <circle cx="121" cy="30"  r="7" fill="#1a237e" stroke="#c5cae9" strokeWidth="1.5"/>
+                <circle cx="65"  cy="188" r="7" fill="#1a237e" stroke="#c5cae9" strokeWidth="1.5"/>
+                <circle cx="121" cy="188" r="7" fill="#1a237e" stroke="#c5cae9" strokeWidth="1.5"/>
 
-                {/* ── Trolley ── */}
+                {/* ── Bridge Girder (VERTICAL — ตั้งฉากกับราง) ── */}
+                <rect x="83" y="43" width="20" height="134" fill="#fbc02d" stroke="#f57f17" strokeWidth="1.5" rx="2"/>
+                {/* stiffener lines */}
+                <line x1="83" y1="88"  x2="103" y2="88"  stroke="#f9a825" strokeWidth="0.8"/>
+                <line x1="83" y1="110" x2="103" y2="110" stroke="#f9a825" strokeWidth="0.8"/>
+                <line x1="83" y1="132" x2="103" y2="132" stroke="#f9a825" strokeWidth="0.8"/>
+                {/* Bridge label rotated */}
+                <text x="93" y="88" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#7b5800"
+                  transform="rotate(-90 93 110)">BRIDGE 23.6m</text>
+
+                {/* Cross Travel direction indicator */}
+                <text x="107" y="55"  fill="#6a1b9a" fontSize="8">↓ CT</text>
+                <text x="107" y="170" fill="#6a1b9a" fontSize="8">↑ CT</text>
+
+                {/* ── HOIST / Trolley (moves vertically along bridge) ── */}
                 {(() => {
-                  const tx = 52 + (trolleyPos / 22.6) * 196;
+                  const cy = 44 + (trolleyPos / 22.6) * 133;
                   return (
                     <g>
-                      <circle cx={tx} cy="100" r="11" fill="#d32f2f" stroke="#b71c1c" strokeWidth="1.5"/>
-                      <circle cx={tx} cy="100" r="5"  fill="#ef9a9a" opacity="0.5"/>
-                      <text x={tx} y="103" textAnchor="middle" fill="white" fontSize="8" fontWeight="bold">T</text>
+                      <rect x="72" y={cy - 11} width="42" height="22" fill="#d32f2f" stroke="#b71c1c" strokeWidth="1.5" rx="3"/>
+                      <text x="93" y={cy + 5} textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">HOIST</text>
                     </g>
                   );
                 })()}
 
-                {/* ── Force arrows (origin = bridge center) ── */}
-                {fLT > 0.01 && (
-                  <g>
-                    <line x1="150" y1="100" x2={150 + arrowLT} y2="100"
-                      stroke="#0277bd" strokeWidth="3.5" markerEnd="url(#arr-lt)"/>
-                    <text x={153 + arrowLT} y="97" fill="#0277bd" fontSize="10" fontWeight="bold">
-                      {fLT.toFixed(2)}T
-                    </text>
-                  </g>
-                )}
-                {fCT > 0.01 && (
-                  <g>
-                    <line x1="150" y1="100" x2="150" y2={100 + arrowCT}
-                      stroke="#6a1b9a" strokeWidth="3.5" markerEnd="url(#arr-ct)"/>
-                    <text x="154" y={100 + arrowCT + 12} fill="#6a1b9a" fontSize="10" fontWeight="bold">
-                      {fCT.toFixed(2)}T
-                    </text>
-                  </g>
-                )}
-                {fComb > 0.01 && bothActive && (
-                  <g>
-                    <line x1="150" y1="100"
-                      x2={150 + fLT / fComb * arrowComb}
-                      y2={100 + fCT / fComb * arrowComb}
-                      stroke="#e65100" strokeWidth="3" strokeDasharray="5,2" markerEnd="url(#arr-cb)"/>
-                    <text x={152 + fLT / fComb * arrowComb}
-                          y={98  + fCT / fComb * arrowComb + 14}
-                      fill="#e65100" fontSize="10" fontWeight="bold">
-                      {fComb.toFixed(2)}T
-                    </text>
-                  </g>
-                )}
+                {/* ── Force vector diagram (right side) ── */}
+                {/* Axis labels */}
+                <text x="230" y="14" textAnchor="middle" fill="#546e7a" fontSize="9" fontWeight="bold">Force Vectors</text>
+                <line x1="200" y1="110" x2="295" y2="110" stroke="#eceff1" strokeWidth="1"/>
+                <line x1="200" y1="40"  x2="200" y2="200" stroke="#eceff1" strokeWidth="1"/>
+
+                {/* F_LT: horizontal (side thrust along runway direction) */}
+                {fLT > 0.01 && (() => {
+                  const a = Math.min(arrowLT * 0.6, 80);
+                  return (
+                    <g>
+                      <line x1="200" y1="110" x2={200 + a} y2="110"
+                        stroke="#0277bd" strokeWidth="3" markerEnd="url(#arr-lt)"/>
+                      <text x={202 + a} y="107" fill="#0277bd" fontSize="10" fontWeight="bold">F_LT {fLT.toFixed(2)}T</text>
+                    </g>
+                  );
+                })()}
+
+                {/* F_CT: vertical (side thrust along bridge direction) */}
+                {fCT > 0.01 && (() => {
+                  const a = Math.min(arrowCT * 0.6, 70);
+                  return (
+                    <g>
+                      <line x1="200" y1="110" x2="200" y2={110 + a}
+                        stroke="#6a1b9a" strokeWidth="3" markerEnd="url(#arr-ct)"/>
+                      <text x="204" y={112 + a} fill="#6a1b9a" fontSize="10" fontWeight="bold">F_CT {fCT.toFixed(2)}T</text>
+                    </g>
+                  );
+                })()}
+
+                {/* F_comb: diagonal */}
+                {fComb > 0.01 && bothActive && (() => {
+                  const a = Math.min(arrowComb * 0.6, 85);
+                  const dx = fLT / fComb * a;
+                  const dy = fCT / fComb * a;
+                  return (
+                    <g>
+                      <line x1="200" y1="110" x2={200 + dx} y2={110 + dy}
+                        stroke="#e65100" strokeWidth="2.5" strokeDasharray="5,2" markerEnd="url(#arr-cb)"/>
+                      <text x={202 + dx} y={108 + dy + 12} fill="#e65100" fontSize="10" fontWeight="bold">
+                        {fComb.toFixed(2)}T
+                      </text>
+                    </g>
+                  );
+                })()}
+
+                <circle cx="200" cy="110" r="3" fill="#455a64"/>
 
                 {/* ── Legend ── */}
-                <g transform="translate(6, 196)">
-                  <rect width="8" height="8" fill="#0277bd" rx="1"/><text x="11" y="8" fill="#546e7a" fontSize="9">Long Travel</text>
-                  <rect x="78" width="8" height="8" fill="#6a1b9a" rx="1"/><text x="89" y="8" fill="#546e7a" fontSize="9">Cross Travel</text>
-                  <rect x="166" width="8" height="8" fill="#e65100" rx="1"/><text x="177" y="8" fill="#546e7a" fontSize="9">Combined</text>
-                  <rect x="222" width="8" height="8" fill="#ff8f00" rx="1"/><text x="233" y="8" fill="#546e7a" fontSize="9">SQT BAR</text>
+                <g transform="translate(5, 207)">
+                  <rect width="7" height="7" fill="#0277bd" rx="1"/><text x="10" y="7" fill="#546e7a" fontSize="8">Long Travel</text>
+                  <rect x="73" width="7" height="7" fill="#6a1b9a" rx="1"/><text x="83" y="7" fill="#546e7a" fontSize="8">Cross Travel</text>
+                  <rect x="151" width="7" height="7" fill="#e65100" rx="1"/><text x="161" y="7" fill="#546e7a" fontSize="8">Combined</text>
+                  <rect x="219" width="7" height="7" fill="#ff8f00" rx="1"/><text x="229" y="7" fill="#546e7a" fontSize="8">SQT BAR</text>
                 </g>
               </svg>
             </div>
