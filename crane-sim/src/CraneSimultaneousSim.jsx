@@ -31,8 +31,8 @@ function kBeam(Iy_cm4, span_mm) {
 function calcAccelG(mode, level, hasVFD, vfdRamp) {
   if (level === 0) return 0;
   const spd = mode === "lt"
-    ? (level === 1 ? 15 / 60 : 30 / 60)
-    : (level === 1 ? 10 / 60 : 20 / 60);
+    ? (level === 1 ? 4  / 60 : 50 / 60)
+    : (level === 1 ? 5  / 60 : 20 / 60);
   const tNoVFD = mode === "lt"
     ? (level === 1 ? 1.5 : 1.0)
     : (level === 1 ? 1.0 : 0.8);
@@ -417,11 +417,11 @@ export default function CraneSimultaneousSim() {
             <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
               <button onClick={() => toggleLT(1)}
                 style={{ ...btnBase, backgroundColor: ltLevel === 1 ? "#0277bd" : "#90caf9", boxShadow: ltLevel === 1 ? "0 0 0 3px #81d4fa" : "none" }}>
-                Speed 1<br/><span style={{ fontSize: 10, fontWeight: "normal" }}>15 m/min</span>
+                Speed 1<br/><span style={{ fontSize: 10, fontWeight: "normal" }}>4 m/min</span>
               </button>
               <button onClick={() => toggleLT(2)}
                 style={{ ...btnBase, backgroundColor: ltLevel === 2 ? "#b71c1c" : "#ef9a9a", boxShadow: ltLevel === 2 ? "0 0 0 3px #ffcdd2" : "none" }}>
-                Speed 2<br/><span style={{ fontSize: 10, fontWeight: "normal" }}>30 m/min</span>
+                Speed 2<br/><span style={{ fontSize: 10, fontWeight: "normal" }}>50 m/min</span>
               </button>
             </div>
             <div style={{
@@ -479,7 +479,7 @@ export default function CraneSimultaneousSim() {
             <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
               <button onClick={() => toggleCT(1)}
                 style={{ ...btnBase, backgroundColor: ctLevel === 1 ? "#6a1b9a" : "#ce93d8", boxShadow: ctLevel === 1 ? "0 0 0 3px #e1bee7" : "none" }}>
-                Speed 1<br/><span style={{ fontSize: 10, fontWeight: "normal" }}>10 m/min</span>
+                Speed 1<br/><span style={{ fontSize: 10, fontWeight: "normal" }}>5 m/min</span>
               </button>
               <button onClick={() => toggleCT(2)}
                 style={{ ...btnBase, backgroundColor: ctLevel === 2 ? "#4a148c" : "#9c27b0", boxShadow: ctLevel === 2 ? "0 0 0 3px #d1c4e9" : "none" }}>
